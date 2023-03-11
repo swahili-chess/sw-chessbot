@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"github.com/ChessSwahili/ChessSWBot/internal/data"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 )
@@ -25,16 +25,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer db.Close()
 
-	fmt.Println(db) // print the db for now
+	models := data.NewModels(db)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("Token"))
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
@@ -56,10 +56,20 @@ func main() {
 		// so we leave it empty.
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 
-		// Extract the command from the Message.gi
+		// Extract the command from the Message
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = "Please use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`;"
+			botUser := &data.User{
+				ID:       update.Message.From.ID,
+				Isactive: true,
+			}
+			err := models.Users.Insert(botUser)
+
+			if err != nil {
+				log.Println(err)
+			}
+
 		case "stop":
 			msg.Text = "Sorry to see you leave You wont be receiving notifications. Type /start to receive "
 		case "team":

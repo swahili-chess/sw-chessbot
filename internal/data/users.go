@@ -8,8 +8,8 @@ import (
 )
 
 type User struct {
-	ID       string
-	Isactive string
+	ID       int64
+	Isactive bool
 }
 
 type UserModel struct {
