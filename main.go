@@ -1,13 +1,34 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	"flag"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	_ "github.com/lib/pq"
 )
 
 func main() {
+	var dsn string
+
+	flag.StringVar(&dsn, "db-dsn", os.Getenv("DSN_BOT"), "Postgres DSN")
+
+	flag.Parse()
+
+	db, err := openDB(dsn)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	fmt.Println(db) // print the db for now
+
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("Token"))
 	if err != nil {
 		log.Panic(err)
@@ -35,7 +56,7 @@ func main() {
 		// so we leave it empty.
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 
-		// Extract the command from the Message.
+		// Extract the command from the Message.gi
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = "Please use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`;"
@@ -51,4 +72,23 @@ func main() {
 			log.Panic(err)
 		}
 	}
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", dsn)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+	defer cancel()
+
+	db.PingContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+	return db, err
 }
