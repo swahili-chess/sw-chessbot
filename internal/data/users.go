@@ -27,11 +27,7 @@ func (u UserModel) Insert(user *User) error {
 
 	_ , err := u.DB.ExecContext(ctx,query,user.ID,user.Isactive)
 
-	if err != nil {
-		log.Println(err)
-	}
-    
-	return err
+    return err
 	
 
 }
