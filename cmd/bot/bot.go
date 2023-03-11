@@ -13,6 +13,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const startTxt = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`;"
+
+const stopTxt = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
+
+const teamTxt =  "There are 10 members in chesswahili"
+
+const dontTxt = "I don't know that command"
+
+
 func main() {
 	var dsn string
 
@@ -59,7 +68,7 @@ func main() {
 		// Extract the command from the Message
 		switch update.Message.Command() {
 		case "start":
-			msg.Text = "Please use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`;"
+			msg.Text = startTxt
 			botUser := &data.User{
 				ID:       update.Message.From.ID,
 				Isactive: true,
@@ -71,11 +80,11 @@ func main() {
 			}
 
 		case "stop":
-			msg.Text = "Sorry to see you leave You wont be receiving notifications. Type /start to receive "
+			msg.Text = stopTxt
 		case "team":
-			msg.Text = "There are 10 members in chesswahili"
+			msg.Text = teamTxt
 		default:
-			msg.Text = "I don't know that command"
+			msg.Text = dontTxt
 		}
 
 		if _, err := bot.Send(msg); err != nil {
