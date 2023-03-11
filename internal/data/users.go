@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 )
 
@@ -24,10 +23,8 @@ func (u UserModel) Insert(user *User) error {
 
 	defer cancel()
 
+	_, err := u.DB.ExecContext(ctx, query, user.ID, user.Isactive)
 
-	_ , err := u.DB.ExecContext(ctx,query,user.ID,user.Isactive)
-
-    return err
-	
+	return err
 
 }
