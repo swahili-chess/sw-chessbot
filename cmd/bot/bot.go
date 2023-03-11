@@ -17,10 +17,9 @@ const startTxt = "Use this bot to get link of games of Chesswahili team members 
 
 const stopTxt = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
 
-const teamTxt =  "There are 10 members in chesswahili"
+const teamTxt = "There are 10 members in chesswahili"
 
 const dontTxt = "I don't know that command"
-
 
 func main() {
 	var dsn string
@@ -43,7 +42,6 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
@@ -76,10 +74,28 @@ func main() {
 			err := models.Users.Insert(botUser)
 
 			if err != nil {
-				log.Println(err)
+				switch {
+				case err.Error() == `pq: duplicate key value violates unique constraint "users_pkey"`:
+
+					err := models.Users.Update(botUser)
+					if err != nil {
+						log.Println(err)
+					}
+                
+			    default:
+					log.Println(err)
+				}
 			}
 
 		case "stop":
+			botUser := &data.User{
+				ID:       update.Message.From.ID,
+				Isactive: false,
+			}
+			err := models.Users.Update(botUser)
+			if err != nil {
+				log.Println(err)
+			}
 			msg.Text = stopTxt
 		case "team":
 			msg.Text = teamTxt
