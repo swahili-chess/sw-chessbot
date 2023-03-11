@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -13,11 +14,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const startTxt = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`;"
+const startTxt = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`"
 
 const stopTxt = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
-
-const teamTxt = "There are 10 members in chesswahili"
 
 const dontTxt = "I don't know that command"
 
@@ -42,8 +41,6 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -81,8 +78,8 @@ func main() {
 					if err != nil {
 						log.Println(err)
 					}
-                
-			    default:
+
+				default:
 					log.Println(err)
 				}
 			}
@@ -98,7 +95,11 @@ func main() {
 			}
 			msg.Text = stopTxt
 		case "team":
-			msg.Text = teamTxt
+			res, err := models.Users.GetActiveUsers()
+			if err != nil {
+				log.Println(err)
+			}
+			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 		default:
 			msg.Text = dontTxt
 		}
