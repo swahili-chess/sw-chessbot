@@ -67,7 +67,7 @@ type ChessTeamPlayer struct {
 	FollowsYou bool `json:"followsYou"`
 }
 
-func fetchTeamPlayers() []string {
+func FetchTeamPlayers() []string {
 
 	var ids []string
 	client := http.DefaultClient
