@@ -4,30 +4,19 @@ import (
 	"time"
 )
 
-type poller struct {
-	ticker *time.Ticker // periodic ticker
-	url    string
-}
+func (sw SWbot) poller(usersId []string) {
 
-func newPoller() *poller {
-	rv := &poller{
-		ticker: time.NewTicker(time.Second * 6),
-		url:    "https://lichess.org/api/users/status?ids=",
-	}
+	ticker := time.NewTicker(time.Second * 6)
 
-	go rv.run()
-	return rv
-}
+	defer ticker.Stop()
 
-func (p *poller) run() {
+	url := prepareUrl(usersId)
 
-	for range p.ticker.C {
+	links := make(map[string]bool)
 
-		fetch(p.url)
+	for range ticker.C {
+
+		sw.fetchStatus(url, links)
 
 	}
-}
-
-func fetch(url string) {
-	// do some fetch
 }

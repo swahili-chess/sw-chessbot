@@ -20,6 +20,11 @@ const stopTxt = "Sorry to see you leave You wont be receiving notifications. Typ
 
 const dontTxt = "I don't know that command"
 
+type SWbot struct {
+	bot    *tgbotapi.BotAPI
+	models data.Models
+}
+
 func main() {
 	var dsn string
 
@@ -42,10 +47,19 @@ func main() {
 		log.Panic(err)
 	}
 
+	swbot := SWbot{
+		bot:    bot,
+		models: models,
+	}
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
+
+	userids := data.FetchTeamPlayers()
+
+	go swbot.poller(userids)
 
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message updates
@@ -68,13 +82,13 @@ func main() {
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
-			err := models.Users.Insert(botUser)
+			err := swbot.models.Users.Insert(botUser)
 
 			if err != nil {
 				switch {
 				case err.Error() == `pq: duplicate key value violates unique constraint "users_pkey"`:
 
-					err := models.Users.Update(botUser)
+					err := swbot.models.Users.Update(botUser)
 					if err != nil {
 						log.Println(err)
 					}
@@ -89,7 +103,7 @@ func main() {
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
-			err := models.Users.Update(botUser)
+			err := swbot.models.Users.Update(botUser)
 			if err != nil {
 				log.Println(err)
 			}
@@ -104,8 +118,8 @@ func main() {
 			msg.Text = dontTxt
 		}
 
-		if _, err := bot.Send(msg); err != nil {
-			log.Panic(err)
+		if _, err := swbot.bot.Send(msg); err != nil {
+			log.Println(err)
 		}
 	}
 }
