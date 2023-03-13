@@ -1,0 +1,62 @@
+name: Go Test Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.20.1
+      
+    - name: Test
+      run: go test -v ./...
+      
+    - name: Build
+      run: go build -v -o chessbot-binary ./cmd/bot
+
+    - uses: actions/upload-artifact@v3
+      with:
+          name: chessbot-artifact
+          path: ./chessbot-binary
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: chessbot-artifact
+      - name: Deploy to server
+        uses: appleboy/scp-action@master
+        with:
+           host: ${{ secrets.HOST }}
+           username: ${{ secrets.USERNAME }}
+           password: ${{ secrets.PASSWORD }}
+           port: ${{ secrets.PORT }}
+           source: ./chessbot-binary
+           target: "/home/${{ secrets.USERNAME }}/chessbot"
+
+      - name: Start ChessBot Swahili  service and Reload Nginx
+        uses: appleboy/ssh-action@master
+        with:
+           host: ${{ secrets.HOST }}
+           username: ${{ secrets.USERNAME }}
+           password: ${{ secrets.PASSWORD }}
+           port: ${{ secrets.PORT }}
+           script: |
+               cd /home/${{ secrets.USERNAME }}/chessbot
+               chmod +x chessbot-binary
+               echo ${{ secrets.PASSWORD }} | sudo -S systemctl stop chessbot.service 
+               echo ${{ secrets.PASSWORD }} | sudo -S systemctl start chessbot.service 
+               echo ${{ secrets.PASSWORD }} | sudo -S systemctl reload nginx
+
+ 
