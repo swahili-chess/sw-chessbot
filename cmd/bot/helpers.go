@@ -51,7 +51,7 @@ func (sw SWbot) fetchStatus(url string, links map[string]bool) {
 	}
 
 	for _, user := range userStatuses {
-		if user.PlayingId {
+		if len(user.PlayingId) != 0 {
 
 			if _, ok := links[user.PlayingId]; !ok {
 				links[user.PlayingId] = true
