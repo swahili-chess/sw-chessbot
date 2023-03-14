@@ -42,10 +42,16 @@ func main() {
 
 	models := data.NewModels(db)
 
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("Token"))
-	if err != nil {
-		log.Panic(err)
+	token := os.Getenv("Token")
+	if token = "" {
+		fmt.Println("Bot token not provided, please provide token: ")
+		fmt.Scanln(&token)
 	}
+
+        bot, err := tgbotapi.NewBotAPI(token)
+        if err != nil {
+            log.Panic(err)
+        }
 
 	swbot := SWbot{
 		bot:    bot,
