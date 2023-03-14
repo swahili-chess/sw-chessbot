@@ -43,7 +43,7 @@ func main() {
 	models := data.NewModels(db)
 
 	token := os.Getenv("Token")
-	if token = "" {
+	if token == "" {
 		fmt.Println("Bot token not provided, please provide token: ")
 		fmt.Scanln(&token)
 	}
