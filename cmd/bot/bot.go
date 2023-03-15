@@ -42,13 +42,13 @@ func main() {
 
 	models := data.NewModels(db)
 
-	token := os.Getenv("Token")
-	if token == "" {
+	botToken := os.Getenv("TG_BOT_TOKEN")
+	if botToken == "" {
 		fmt.Println("Bot token not provided, please provide token: ")
-		fmt.Scanln(&token)
+		fmt.Scanln(&botToken)
 	}
 
-        bot, err := tgbotapi.NewBotAPI(token)
+        bot, err := tgbotapi.NewBotAPI(botToken)
         if err != nil {
             log.Panic(err)
         }
