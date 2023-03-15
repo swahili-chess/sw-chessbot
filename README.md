@@ -1,6 +1,6 @@
 ## Chesswahili Game Links Bot
 
-This is a bot written in Golang that sends links of games played by members of Chesswahili on both Telegram .
+This is a bot written in Golang that sends links of games played by members of Chesswahili on Telegram .
 
 ## How it works
 
