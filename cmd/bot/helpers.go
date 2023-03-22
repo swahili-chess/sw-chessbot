@@ -24,13 +24,13 @@ type UserStatus struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw SWbot)sendMessagesToIds(linkId string) {
+func (sw SWbot) sendMessagesToIds(linkId string) {
 	gameLink := base_url + linkId
 
-	ids ,_ := sw.models.Users.GetActiveUsers()
+	ids, _ := sw.models.Users.GetActiveUsers()
 
 	for _, id := range ids {
-        msg := tgbotapi.NewMessage(id.Id, gameLink)
+		msg := tgbotapi.NewMessage(id.Id, gameLink)
 
 		sw.bot.Send(msg)
 	}
@@ -47,7 +47,7 @@ func (sw SWbot) fetchStatus(url string, links map[string]bool) {
 	err = json.NewDecoder(resp.Body).Decode(&userStatuses)
 
 	if err != nil {
-		log.Println("Error decoding the json body")
+		log.Println("Error decoding the json body", err)
 	}
 
 	for _, user := range userStatuses {
