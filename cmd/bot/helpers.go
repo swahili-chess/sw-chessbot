@@ -55,14 +55,14 @@ func (sw *SWbot) fetchStatus(url string, links *map[string]time.Time) {
 	for _, user := range userStatuses {
 		if len(user.PlayingId) != 0 {
 
-			sw.RLock()
+			sw.mu.RLock()
 			_, idExists := (*links)[user.PlayingId]
-			sw.Unlock()
+			sw.mu.Unlock()
 
 			if !idExists {
-				sw.Lock()
+				sw.mu.Lock()
 				(*links)[user.PlayingId] = time.Now()
-				sw.Unlock()
+				sw.mu.Unlock()
 
 				sw.sendMessagesToIds(user.PlayingId)
 			}
@@ -86,9 +86,9 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	for {
 		for lichessId, timeAtStart := range *links {
 			if time.Since(timeAtStart) > minLinkStayInMap {
-				sw.Lock()
+				sw.mu.Lock()
 				delete(*links, lichessId)
-				sw.Unlock()
+				sw.mu.Unlock()
 
 			}
 		}

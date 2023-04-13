@@ -25,7 +25,7 @@ type SWbot struct {
 	bot    *tgbotapi.BotAPI
 	models data.Models
 	links  *map[string]time.Time
-	sync.RWMutex
+	mu sync.RWMutex
 }
 
 func main() {
