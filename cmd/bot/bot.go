@@ -125,6 +125,10 @@ func main() {
 				log.Println(err)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
+
+		case "map": 
+		    msg.Text = fmt.Sprintf("There are %d in a map so far.", len(swbot.links))
+		   
 		default:
 			msg.Text = dontTxt
 		}
