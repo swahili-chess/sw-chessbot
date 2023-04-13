@@ -12,11 +12,11 @@ func (sw *SWbot) poller(usersId []string) {
 
 	url := prepareUrl(usersId)
 
-	links := make(map[string]bool)
+	go sw.cleanUpMap(sw.links)
 
 	for range ticker.C {
 
-		sw.fetchStatus(url, links)
+		sw.fetchStatus(url, sw.links)
 
 	}
 }

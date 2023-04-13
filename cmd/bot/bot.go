@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ChessSwahili/ChessSWBot/internal/data"
@@ -23,6 +24,8 @@ const dontTxt = "I don't know that command"
 type SWbot struct {
 	bot    *tgbotapi.BotAPI
 	models data.Models
+	links  map[string]time.Time
+	sync.RWMutex
 }
 
 func main() {
@@ -48,14 +51,16 @@ func main() {
 		fmt.Scanln(&botToken)
 	}
 
-        bot, err := tgbotapi.NewBotAPI(botToken)
-        if err != nil {
-            log.Panic(err)
-        }
+	bot, err := tgbotapi.NewBotAPI(botToken)
+	if err != nil {
+		log.Panic(err)
+	}
 
+	links := make(map[string]time.Time)
 	swbot := SWbot{
 		bot:    bot,
 		models: models,
+		links:  links,
 	}
 
 	u := tgbotapi.NewUpdate(0)

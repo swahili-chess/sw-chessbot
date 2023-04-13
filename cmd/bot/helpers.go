@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -12,6 +13,7 @@ import (
 const withGameIds = "&withGameIds=true"
 const urlStatus = "https://lichess.org/api/users/status?ids="
 const base_url = "https://lichess.org/"
+const minLinkStayInMap = 1 * time.Hour
 
 type UserStatus struct {
 	ID        string `json:"id"`
@@ -36,7 +38,7 @@ func (sw *SWbot) sendMessagesToIds(linkId string) {
 	}
 }
 
-func (sw *SWbot) fetchStatus(url string, links map[string]bool) {
+func (sw *SWbot) fetchStatus(url string, links map[string]time.Time) {
 	var userStatuses []UserStatus
 	resp, err := http.Get(url)
 	if err != nil {
@@ -53,8 +55,15 @@ func (sw *SWbot) fetchStatus(url string, links map[string]bool) {
 	for _, user := range userStatuses {
 		if len(user.PlayingId) != 0 {
 
-			if _, ok := links[user.PlayingId]; !ok {
-				links[user.PlayingId] = true
+			sw.RLock()
+			_, idExists := links[user.PlayingId]
+			sw.Unlock()
+
+			if !idExists {
+				sw.Lock()
+				links[user.PlayingId] = time.Now()
+				sw.Unlock()
+
 				sw.sendMessagesToIds(user.PlayingId)
 			}
 
@@ -71,4 +80,17 @@ func prepareUrl(userIds []string) string {
 
 	return fetchUrl
 
+}
+
+func (sw *SWbot) cleanUpMap(links map[string]time.Time) {
+	for {
+		for lichessId, timeAtStart := range links {
+			if time.Since(timeAtStart) > minLinkStayInMap {
+				sw.Lock()
+				delete(links, lichessId)
+				sw.Unlock()
+
+			}
+		}
+	}
 }
