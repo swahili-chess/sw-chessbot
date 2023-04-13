@@ -57,7 +57,7 @@ func (sw *SWbot) fetchStatus(url string, links *map[string]time.Time) {
 
 			sw.mu.RLock()
 			_, idExists := (*links)[user.PlayingId]
-			sw.mu.Unlock()
+			sw.mu.RUnlock()
 
 			if !idExists {
 				sw.mu.Lock()

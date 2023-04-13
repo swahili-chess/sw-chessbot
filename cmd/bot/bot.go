@@ -25,7 +25,7 @@ type SWbot struct {
 	bot    *tgbotapi.BotAPI
 	models data.Models
 	links  *map[string]time.Time
-	mu sync.RWMutex
+	mu     sync.RWMutex
 }
 
 func main() {
@@ -126,9 +126,9 @@ func main() {
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
-		case "map": 
-		    msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
-		   
+		case "map":
+			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
+
 		default:
 			msg.Text = dontTxt
 		}
