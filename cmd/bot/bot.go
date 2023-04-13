@@ -24,7 +24,7 @@ const dontTxt = "I don't know that command"
 type SWbot struct {
 	bot    *tgbotapi.BotAPI
 	models data.Models
-	links  map[string]time.Time
+	links  *map[string]time.Time
 	sync.RWMutex
 }
 
@@ -60,7 +60,7 @@ func main() {
 	swbot := SWbot{
 		bot:    bot,
 		models: models,
-		links:  links,
+		links:  &links,
 	}
 
 	u := tgbotapi.NewUpdate(0)
@@ -127,7 +127,7 @@ func main() {
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
 		case "map": 
-		    msg.Text = fmt.Sprintf("There are %d in a map so far.", len(swbot.links))
+		    msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
 		   
 		default:
 			msg.Text = dontTxt

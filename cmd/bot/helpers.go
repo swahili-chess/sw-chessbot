@@ -38,7 +38,7 @@ func (sw *SWbot) sendMessagesToIds(linkId string) {
 	}
 }
 
-func (sw *SWbot) fetchStatus(url string, links map[string]time.Time) {
+func (sw *SWbot) fetchStatus(url string, links *map[string]time.Time) {
 	var userStatuses []UserStatus
 	resp, err := http.Get(url)
 	if err != nil {
@@ -56,12 +56,12 @@ func (sw *SWbot) fetchStatus(url string, links map[string]time.Time) {
 		if len(user.PlayingId) != 0 {
 
 			sw.RLock()
-			_, idExists := links[user.PlayingId]
+			_, idExists := (*links)[user.PlayingId]
 			sw.Unlock()
 
 			if !idExists {
 				sw.Lock()
-				links[user.PlayingId] = time.Now()
+				(*links)[user.PlayingId] = time.Now()
 				sw.Unlock()
 
 				sw.sendMessagesToIds(user.PlayingId)
@@ -82,12 +82,12 @@ func prepareUrl(userIds []string) string {
 
 }
 
-func (sw *SWbot) cleanUpMap(links map[string]time.Time) {
+func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	for {
-		for lichessId, timeAtStart := range links {
+		for lichessId, timeAtStart := range *links {
 			if time.Since(timeAtStart) > minLinkStayInMap {
 				sw.Lock()
-				delete(links, lichessId)
+				delete(*links, lichessId)
 				sw.Unlock()
 
 			}
