@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-func (sw SWbot) poller(usersId []string) {
+func (sw *SWbot) poller(usersId []string) {
 
 	ticker := time.NewTicker(time.Second * 6)
 

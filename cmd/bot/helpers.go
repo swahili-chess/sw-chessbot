@@ -24,7 +24,7 @@ type UserStatus struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw SWbot) sendMessagesToIds(linkId string) {
+func (sw *SWbot) sendMessagesToIds(linkId string) {
 	gameLink := base_url + linkId
 
 	ids, _ := sw.models.Users.GetActiveUsers()
@@ -36,7 +36,7 @@ func (sw SWbot) sendMessagesToIds(linkId string) {
 	}
 }
 
-func (sw SWbot) fetchStatus(url string, links map[string]bool) {
+func (sw *SWbot) fetchStatus(url string, links map[string]bool) {
 	var userStatuses []UserStatus
 	resp, err := http.Get(url)
 	if err != nil {
