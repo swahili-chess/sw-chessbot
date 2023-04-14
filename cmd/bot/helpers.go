@@ -18,7 +18,7 @@ const (
 	cleanUpTime      = 30 * time.Minute
 )
 
-type UserStatus struct {
+type PlayerStatus struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Title     string `json:"title,omitempty"`
@@ -41,33 +41,33 @@ func (sw *SWbot) sendMessagesToIds(linkId string) {
 	}
 }
 
-func (sw *SWbot) fetchStatus(url string, links *map[string]time.Time) {
-	var userStatuses []UserStatus
+func (sw *SWbot) fetchPlayersStatus(url string, links *map[string]time.Time) {
+	var playerStatuses []PlayerStatus
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Println("Error while fetching status")
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&userStatuses)
+	err = json.NewDecoder(resp.Body).Decode(&playerStatuses)
 
 	if err != nil {
 		log.Println("Error decoding the json body", err)
 	}
 
-	for _, user := range userStatuses {
-		if len(user.PlayingId) != 0 {
+	for _, playerStatus := range playerStatuses {
+		if len(playerStatus.PlayingId) != 0 {
 
 			sw.mu.RLock()
-			_, idExists := (*links)[user.PlayingId]
+			_, idExists := (*links)[playerStatus.PlayingId]
 			sw.mu.RUnlock()
 
 			if !idExists {
 				sw.mu.Lock()
-				(*links)[user.PlayingId] = time.Now()
+				(*links)[playerStatus.PlayingId] = time.Now()
 				sw.mu.Unlock()
 
-				sw.sendMessagesToIds(user.PlayingId)
+				sw.sendMessagesToIds(playerStatus.PlayingId)
 			}
 
 		}
@@ -75,13 +75,13 @@ func (sw *SWbot) fetchStatus(url string, links *map[string]time.Time) {
 
 }
 
-func prepareUrl(userIds []string) string {
+func prepareFetchStatusUrl(playersIds []string) string {
 
-	idsJoined := strings.Join(userIds, ",")
+	joinedPlayerIds := strings.Join(playersIds, ",")
 
-	fetchUrl := urlStatus + idsJoined + withGameIds
+	fetchStatusUrl := urlStatus + joinedPlayerIds + withGameIds
 
-	return fetchUrl
+	return fetchStatusUrl
 
 }
 

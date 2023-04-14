@@ -68,9 +68,9 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	userids := data.FetchTeamPlayers()
+	playersids := data.FetchTeamPlayers()
 
-	go swbot.poller(userids)
+	go swbot.poller(playersids)
 
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message updates
