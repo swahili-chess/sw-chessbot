@@ -14,6 +14,7 @@ const withGameIds = "&withGameIds=true"
 const urlStatus = "https://lichess.org/api/users/status?ids="
 const base_url = "https://lichess.org/"
 const minLinkStayInMap = 1 * time.Hour
+const cleanUpTime =  30 * time.Minute
 
 type UserStatus struct {
 	ID        string `json:"id"`
@@ -83,7 +84,13 @@ func prepareUrl(userIds []string) string {
 }
 
 func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
-	for {
+
+	ticker := time.NewTicker(cleanUpTime)
+
+	defer ticker.Stop()
+
+	for range ticker.C {
+
 		for lichessId, timeAtStart := range *links {
 			if time.Since(timeAtStart) > minLinkStayInMap {
 				sw.mu.Lock()
