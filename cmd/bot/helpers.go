@@ -10,11 +10,13 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const withGameIds = "&withGameIds=true"
-const urlStatus = "https://lichess.org/api/users/status?ids="
-const base_url = "https://lichess.org/"
-const minLinkStayInMap = 1 * time.Hour
-const cleanUpTime =  30 * time.Minute
+const (
+	withGameIds      = "&withGameIds=true"
+	urlStatus        = "https://lichess.org/api/users/status?ids="
+	base_url         = "https://lichess.org/"
+	minLinkStayInMap = 1 * time.Hour
+	cleanUpTime      = 30 * time.Minute
+)
 
 type UserStatus struct {
 	ID        string `json:"id"`
