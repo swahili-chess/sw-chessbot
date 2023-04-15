@@ -21,6 +21,12 @@ const stopTxt = "Sorry to see you leave You wont be receiving notifications. Typ
 
 const dontTxt = "I don't know that command"
 
+const masterID = 731217828
+
+var maintanenanceTxT = "We are having Bot maintenance. Service will resume shortly"
+
+var IsMaintananceCost = false
+
 type SWbot struct {
 	bot    *tgbotapi.BotAPI
 	models data.Models
@@ -129,13 +135,25 @@ func main() {
 		case "map":
 			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
 
+		case "sm":
+			if masterID == update.Message.From.ID {
+				IsMaintananceCost = true
+			}
+
 		default:
 			msg.Text = dontTxt
 		}
 
-		if _, err := swbot.bot.Send(msg); err != nil {
-			log.Println(err)
+		if IsMaintananceCost {
+			swbot.sendMaintananceMsg(maintanenanceTxT)
+			IsMaintananceCost = false
+
+		} else {
+			if _, err := swbot.bot.Send(msg); err != nil {
+				log.Println(err)
+			}
 		}
+
 	}
 }
 

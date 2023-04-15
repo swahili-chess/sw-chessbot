@@ -103,3 +103,15 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 		}
 	}
 }
+
+
+func (sw *SWbot) sendMaintananceMsg(msg string) {
+
+	ids, _ := sw.models.Users.GetActiveUsers()
+
+	for _, id := range ids {
+		msg := tgbotapi.NewMessage(id.Id,msg)
+
+		sw.bot.Send(msg)
+	}
+}
