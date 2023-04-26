@@ -106,6 +106,7 @@ func FetchTeamPlayers() []string {
 		ids = append(ids, ctp.ID)
 
 	}
+	ids = append(ids, "herald18")
 	return ids
 
 }
