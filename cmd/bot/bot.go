@@ -146,6 +146,8 @@ func main() {
 
 		case "help":
 			msg.Text = `
+			Commands for this @chesswahiliBot bot are:
+			
 			/start  start the bot (i.e., enable receiving of the game links)
 			/stop   stop the bot (i.e., disable receiving of the game links)
 			/subs   subscribers for the bot
