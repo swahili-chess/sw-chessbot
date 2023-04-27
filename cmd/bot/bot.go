@@ -129,14 +129,14 @@ func main() {
 				log.Println(err)
 			}
 			msg.Text = stopTxt
-		case "team":
+		case "subs":
 			res, err := models.Users.GetActiveUsers()
 			if err != nil {
 				log.Println(err)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
-		case "map":
+		case "ml":
 			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
 
 		case "sm":
