@@ -146,13 +146,12 @@ func main() {
 
 		case "help":
 			msg.Text = `
-			Commands for this bot are:
-              /start  "start the bot (i.e., enable receiving of the game links)"
-			  /stop   "stop the bot (i.e., disable receiving of the game links)"
-			  /subs   "subscribers for the bot"
-			  /ml     "current map length"
-			  /help   "this help text"
-			  /sm     "send maintenace message" only @Hopertz use this command.
+			/start  start the bot (i.e., enable receiving of the game links)
+			/stop   stop the bot (i.e., disable receiving of the game links)
+			/subs   subscribers for the bot
+			/ml     current map length
+			/help   this help text
+			/sm     send maintenace message for @Hopertz only.
 			`
 
 		default:
