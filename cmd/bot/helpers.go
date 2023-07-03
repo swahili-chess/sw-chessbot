@@ -54,7 +54,8 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		log.Println("Error while fetching status")
+		log.Error("Error while fetching status")
+		return
 	}
 	defer resp.Body.Close()
 
@@ -62,10 +63,11 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 
 	if err != nil {
 		log.Error("Error decoding the json body", err)
+		return
 	}
 
 	for _, playerInfo := range listOfPlayerInfos {
-		
+
 		// Sometimes the playingId is empty
 		if len(playerInfo.PlayingId) != 0 {
 
