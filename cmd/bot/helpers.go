@@ -18,7 +18,8 @@ const (
 	cleanUpTime      = 30 * time.Minute
 )
 
-type PlayerStatus struct {
+// PlayerInfo is the struct that holds the status of the player
+type PlayerInfo struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Title     string `json:"title,omitempty"`
@@ -29,7 +30,8 @@ type PlayerStatus struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw *SWbot) sendMessagesToIds(linkId string) {
+// Send the link to the telegram ids
+func (sw *SWbot) sendMsgToTelegramIds(linkId string) {
 	gameLink := base_url + linkId
 
 	ids, _ := sw.models.Users.GetActiveUsers()
@@ -41,33 +43,40 @@ func (sw *SWbot) sendMessagesToIds(linkId string) {
 	}
 }
 
-func (sw *SWbot) fetchPlayersStatus(url string, links *map[string]time.Time) {
-	var playerStatuses []PlayerStatus
-	resp, err := http.Get(url)
+// Fetch the status of the players whether they are playing or not
+func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
+	var listOfPlayerInfos []PlayerInfo
+
+	// Create a new client with a timeout
+	var client = &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Println("Error while fetching status")
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&playerStatuses)
+	err = json.NewDecoder(resp.Body).Decode(&listOfPlayerInfos)
 
 	if err != nil {
 		log.Println("Error decoding the json body", err)
 	}
 
-	for _, playerStatus := range playerStatuses {
-		if len(playerStatus.PlayingId) != 0 {
+	for _, playerInfo := range listOfPlayerInfos {
+		if len(playerInfo.PlayingId) != 0 {
 
 			sw.mu.RLock()
-			_, idExists := (*links)[playerStatus.PlayingId]
+			_, idExists := (*links)[playerInfo.PlayingId]
 			sw.mu.RUnlock()
 
 			if !idExists {
 				sw.mu.Lock()
-				(*links)[playerStatus.PlayingId] = time.Now()
+				(*links)[playerInfo.PlayingId] = time.Now()
 				sw.mu.Unlock()
 
-				sw.sendMessagesToIds(playerStatus.PlayingId)
+				sw.sendMsgToTelegramIds(playerInfo.PlayingId)
 			}
 
 		}
@@ -75,7 +84,8 @@ func (sw *SWbot) fetchPlayersStatus(url string, links *map[string]time.Time) {
 
 }
 
-func prepareFetchStatusUrl(playersIds []string) string {
+// Prepare the url to fetch the status of the players
+func prepareFetchInfoUrl(playersIds []string) string {
 
 	joinedPlayerIds := strings.Join(playersIds, ",")
 
@@ -85,8 +95,10 @@ func prepareFetchStatusUrl(playersIds []string) string {
 
 }
 
+// Delete links that have stayed in the map for more than 1 hour
 func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 
+	// Run the clean up every 30 minutes
 	ticker := time.NewTicker(cleanUpTime)
 
 	defer ticker.Stop()
@@ -104,13 +116,13 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	}
 }
 
-
+// Send a message to all active users when the bot is down for maintanance
 func (sw *SWbot) sendMaintananceMsg(msg string) {
 
 	ids, _ := sw.models.Users.GetActiveUsers()
 
 	for _, id := range ids {
-		msg := tgbotapi.NewMessage(id.Id,msg)
+		msg := tgbotapi.NewMessage(id.Id, msg)
 
 		sw.bot.Send(msg)
 	}

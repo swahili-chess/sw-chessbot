@@ -72,15 +72,17 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	playerIdsChan := make(chan []string)
+	listOfPlayerIdsChan := make(chan []string)
 
 	updates := bot.GetUpdatesChan(u)
 
-	playersId := data.FetchTeamPlayers()
+	//Fetch player ids from the team for the first time
+	listOfPlayerIds := data.FetchTeamPlayers()
 
-	go swbot.pollTeam(playerIdsChan)
+	// Fetch player  ids after in the team after every 5 minutes
+	go swbot.pollTeam(listOfPlayerIdsChan)
 
-	go swbot.poller(playerIdsChan, &playersId)
+	go swbot.poller(listOfPlayerIdsChan, &listOfPlayerIds)
 
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message updates
