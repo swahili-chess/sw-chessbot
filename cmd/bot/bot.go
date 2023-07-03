@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"log"
+
 	"os"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ChessSwahili/ChessSWBot/internal/data"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -32,6 +34,15 @@ type SWbot struct {
 	models data.Models
 	links  *map[string]time.Time
 	mu     sync.RWMutex
+}
+
+func init() {
+
+	log.SetFormatter(&log.JSONFormatter{})
+
+	log.SetOutput(os.Stdout)
+
+	log.SetLevel(log.InfoLevel)
 }
 
 func main() {
@@ -59,7 +70,7 @@ func main() {
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	links := make(map[string]time.Time)
@@ -113,11 +124,11 @@ func main() {
 
 					err := swbot.models.Users.Update(botUser)
 					if err != nil {
-						log.Println(err)
+						log.Error(err)
 					}
 
 				default:
-					log.Println(err)
+					log.Error(err)
 				}
 			}
 
@@ -128,13 +139,13 @@ func main() {
 			}
 			err := swbot.models.Users.Update(botUser)
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 			msg.Text = stopTxt
 		case "subs":
 			res, err := models.Users.GetActiveUsers()
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
@@ -168,7 +179,7 @@ func main() {
 
 		} else {
 			if _, err := swbot.bot.Send(msg); err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 		}
 

@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -61,7 +61,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 	err = json.NewDecoder(resp.Body).Decode(&listOfPlayerInfos)
 
 	if err != nil {
-		log.Println("Error decoding the json body", err)
+		log.Error("Error decoding the json body", err)
 	}
 
 	for _, playerInfo := range listOfPlayerInfos {

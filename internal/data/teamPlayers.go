@@ -6,9 +6,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type ChessTeamPlayer struct {
+type TeamPlayer struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 	Perfs    map[string]struct {
@@ -70,19 +73,25 @@ type ChessTeamPlayer struct {
 func FetchTeamPlayers() []string {
 
 	var ids []string
-	client := http.DefaultClient
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 
 	req, err := http.NewRequest("GET", "https://lichess.org/api/team/nyumbani-mates/users", nil)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
+
+		return ids
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("LICHESS_TOKEN")))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
+
+		return ids
 	}
 
 	defer resp.Body.Close()
@@ -91,13 +100,13 @@ func FetchTeamPlayers() []string {
 
 	for {
 
-		var ctp ChessTeamPlayer
+		var ctp TeamPlayer
 
 		err := results.Decode(&ctp)
 
 		if err != nil {
 			if err != io.EOF {
-				fmt.Println("fuck we got an error while reading")
+				log.Error("we got an error while reading")
 			}
 
 			break
