@@ -65,6 +65,8 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 	}
 
 	for _, playerInfo := range listOfPlayerInfos {
+		
+		// Sometimes the playingId is empty
 		if len(playerInfo.PlayingId) != 0 {
 
 			sw.mu.RLock()

@@ -90,6 +90,10 @@ func main() {
 	//Fetch player ids from the team for the first time
 	listOfPlayerIds := data.FetchTeamPlayers()
 
+	if len(listOfPlayerIds) == 0 {
+		log.Fatal("No player ids found")
+	}
+
 	// Fetch player  ids after in the team after every 5 minutes
 	go swbot.pollTeam(listOfPlayerIdsChan)
 

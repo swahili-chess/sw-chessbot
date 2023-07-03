@@ -15,8 +15,11 @@ func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []string, listOfPlayerIds *[]
 	for range ticker.C {
 		select {
 
-		case *listOfPlayerIds = <-listOfPlayerIdsChan:
-
+		case playerIdsLists := <-listOfPlayerIdsChan:
+			if len(playerIdsLists) != 0 {
+				*listOfPlayerIds = playerIdsLists
+			}
+			
 		default:
 			url := prepareFetchInfoUrl(*listOfPlayerIds)
 			sw.fetchPlayersInfo(url, sw.links)
