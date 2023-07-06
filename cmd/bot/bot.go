@@ -47,10 +47,16 @@ func init() {
 
 func main() {
 	var dsn string
+	var botToken string
 
 	flag.StringVar(&dsn, "db-dsn", os.Getenv("DSN_BOT"), "Postgres DSN")
+	flag.StringVar(&botToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
 
 	flag.Parse()
+
+	if botToken == "" || dsn == "" {
+		log.Fatal("Bot token or DSN not provided")
+	}
 
 	db, err := openDB(dsn)
 
@@ -61,12 +67,6 @@ func main() {
 	defer db.Close()
 
 	models := data.NewModels(db)
-
-	botToken := os.Getenv("TG_BOT_TOKEN")
-	if botToken == "" {
-		fmt.Println("Bot token not provided, please provide token: ")
-		fmt.Scanln(&botToken)
-	}
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
