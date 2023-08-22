@@ -94,6 +94,8 @@ func main() {
 		log.Fatal("No player ids found")
 	}
 
+	go swbot.InsertUsernames(listOfPlayerIds)
+
 	// Fetch player  ids after in the team after every 5 minutes
 	go swbot.pollTeam(listOfPlayerIdsChan)
 

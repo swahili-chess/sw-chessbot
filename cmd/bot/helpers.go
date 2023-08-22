@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -130,4 +131,49 @@ func (sw *SWbot) sendMaintananceMsg(msg string) {
 
 		sw.bot.Send(msg)
 	}
+}
+
+func (sw *SWbot) InsertUsernames(list []string) {
+	// get current usernames in db
+	usernames, err := sw.models.Lichess.GetLichessUsernames()
+
+	if err != nil {
+		log.Error("Failed to get usernames in DB")
+		return
+	}
+
+	uncommon := findUnCommon(usernames, list)
+
+	for _, username := range uncommon {
+
+		err := sw.models.Lichess.Insert(username)
+
+		if err != nil {
+			log.Error("Failed to insert user", username)
+		}
+
+	}
+}
+
+func findUnCommon(arr1, arr2 []string) []string {
+	uncommon := make([]string, 0)
+	elementSet := make(map[string]bool)
+
+	for _, num := range arr1 {
+		elementSet[num] = true
+	}
+
+	for _, num := range arr2 {
+		if _, found := elementSet[num]; !found {
+			uncommon = append(uncommon, num)
+		} else {
+			delete(elementSet, num) // Remove common elements
+		}
+	}
+
+	for num := range elementSet {
+		uncommon = append(uncommon, num)
+	}
+
+	return uncommon
 }

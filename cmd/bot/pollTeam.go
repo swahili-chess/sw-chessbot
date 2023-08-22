@@ -14,7 +14,11 @@ func (sw *SWbot) pollTeam(playersId chan<- []string) {
 
 	for range ticker.C {
 
+		usernames := data.FetchTeamPlayers()
+
 		playersId <- data.FetchTeamPlayers()
+
+		sw.InsertUsernames(usernames)
 
 	}
 }
