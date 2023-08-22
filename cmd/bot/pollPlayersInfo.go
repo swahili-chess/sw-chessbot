@@ -28,7 +28,7 @@ func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []data.PlayerMinDt, listOfPla
 			}
 
 		default:
-			url := prepareFetchInfoUrl(*listOfPlayerIds,urlStatus, withGameIds)
+			url := prepareFetchInfoUrl(*listOfPlayerIds, urlStatus, withGameIds)
 
 			if url != "" {
 				sw.fetchPlayersInfo(url, sw.links)

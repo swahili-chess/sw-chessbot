@@ -134,7 +134,7 @@ func FetchTeamPlayers() []PlayerMinDt {
 	}
 
 	playerMinDt = append(playerMinDt, pd)
-	
+
 	return playerMinDt
 
 }
