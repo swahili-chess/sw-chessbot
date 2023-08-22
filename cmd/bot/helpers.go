@@ -13,8 +13,6 @@ import (
 )
 
 const (
-	withGameIds      = "&withGameIds=true"
-	urlStatus        = "https://lichess.org/api/users/status?ids="
 	base_url         = "https://lichess.org/"
 	minLinkStayInMap = 1 * time.Hour
 	cleanUpTime      = 30 * time.Minute
@@ -91,8 +89,11 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 }
 
 // Prepare the url to fetch the status of the players
-func prepareFetchInfoUrl(players []data.PlayerMinDt) string {
+func prepareFetchInfoUrl(players []data.PlayerMinDt, urlStatus, withGameIds string) string {
 
+	if len(players) == 0 {
+		return ""
+	}
 	playersIds := []string{}
 
 	for _, player := range players {
@@ -101,9 +102,12 @@ func prepareFetchInfoUrl(players []data.PlayerMinDt) string {
 
 	joinedPlayerIds := strings.Join(playersIds, ",")
 
-	fetchStatusUrl := urlStatus + joinedPlayerIds + withGameIds
+	var urlBuilder strings.Builder
+	urlBuilder.WriteString(urlStatus)
+	urlBuilder.WriteString(joinedPlayerIds)
+	urlBuilder.WriteString(withGameIds)
 
-	return fetchStatusUrl
+	return urlBuilder.String()
 
 }
 

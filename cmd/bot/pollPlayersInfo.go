@@ -6,6 +6,11 @@ import (
 	"github.com/ChessSwahili/ChessSWBot/internal/data"
 )
 
+const (
+	withGameIds = "&withGameIds=true"
+	urlStatus   = "https://lichess.org/api/users/status?ids="
+)
+
 func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []data.PlayerMinDt, listOfPlayerIds *[]data.PlayerMinDt) {
 
 	ticker := time.NewTicker(time.Second * 6)
@@ -23,8 +28,11 @@ func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []data.PlayerMinDt, listOfPla
 			}
 
 		default:
-			url := prepareFetchInfoUrl(*listOfPlayerIds)
-			sw.fetchPlayersInfo(url, sw.links)
+			url := prepareFetchInfoUrl(*listOfPlayerIds,urlStatus, withGameIds)
+
+			if url != "" {
+				sw.fetchPlayersInfo(url, sw.links)
+			}
 		}
 
 	}
