@@ -79,22 +79,22 @@ func (u UserModel) GetActiveUsers() ([]UserId, error) {
 	return userIds, nil
 }
 
-func (l LichessModel) Insert(username string) error {
+func (l LichessModel) Insert(player PlayerMinDt) error {
 
-	query := `INSERT INTO lichess(name) VALUES ($1)`
+	query := `INSERT INTO lichess(lichess_id, username) VALUES ($1, $2)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	defer cancel()
 
-	_, err := l.DB.ExecContext(ctx, query, username)
+	_, err := l.DB.ExecContext(ctx, query, player.ID, player.Username)
 
 	return err
 
 }
 
 func (l LichessModel) GetLichessUsernames() ([]string, error) {
-	query := `SELECT name from lichess`
+	query := `SELECT lichess_id from lichess`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
@@ -106,19 +106,19 @@ func (l LichessModel) GetLichessUsernames() ([]string, error) {
 		return nil, err
 	}
 
-	var usernames []string
+	var lichess_ids []string
 
 	for rows.Next() {
-		var username string
-		if err := rows.Scan(&username); err != nil {
-			return usernames, err
+		var lichess_id string
+		if err := rows.Scan(&lichess_id); err != nil {
+			return lichess_ids, err
 		}
 
-		usernames = append(usernames, username)
+		lichess_ids = append(lichess_ids, lichess_id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return usernames, err
+		return lichess_ids, err
 	}
-	return usernames, nil
+	return lichess_ids, nil
 }

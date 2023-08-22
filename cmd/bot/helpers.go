@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ChessSwahili/ChessSWBot/internal/data"
 	log "github.com/sirupsen/logrus"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -90,7 +91,13 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 }
 
 // Prepare the url to fetch the status of the players
-func prepareFetchInfoUrl(playersIds []string) string {
+func prepareFetchInfoUrl(players []data.PlayerMinDt) string {
+
+	playersIds := []string{}
+
+	for _, player := range players {
+		playersIds = append(playersIds, player.ID)
+	}
 
 	joinedPlayerIds := strings.Join(playersIds, ",")
 
@@ -133,47 +140,43 @@ func (sw *SWbot) sendMaintananceMsg(msg string) {
 	}
 }
 
-func (sw *SWbot) InsertUsernames(list []string) {
+func (sw *SWbot) InsertUsernames(list []data.PlayerMinDt) {
 	// get current usernames in db
-	usernames, err := sw.models.Lichess.GetLichessUsernames()
+	lichess_ids, err := sw.models.Lichess.GetLichessUsernames()
 
 	if err != nil {
 		log.Error("Failed to get usernames in DB")
 		return
 	}
 
-	uncommon := findUnCommon(usernames, list)
+	newPlayers := findNewPlayers(lichess_ids, list)
 
-	for _, username := range uncommon {
+	for _, player := range newPlayers {
 
-		err := sw.models.Lichess.Insert(username)
+		err := sw.models.Lichess.Insert(player)
 
 		if err != nil {
-			log.Error("Failed to insert user", username)
+			log.Error("Failed to insert user", player)
 		}
 
 	}
 }
 
-func findUnCommon(arr1, arr2 []string) []string {
-	uncommon := make([]string, 0)
+func findNewPlayers(lichess_ids []string, players []data.PlayerMinDt) []data.PlayerMinDt {
+	newPlayers := []data.PlayerMinDt{}
 	elementSet := make(map[string]bool)
 
-	for _, num := range arr1 {
-		elementSet[num] = true
+	for _, lichess_id := range lichess_ids {
+		elementSet[lichess_id] = true
 	}
 
-	for _, num := range arr2 {
-		if _, found := elementSet[num]; !found {
-			uncommon = append(uncommon, num)
+	for _, dt := range players {
+		if _, found := elementSet[dt.ID]; !found {
+			newPlayers = append(newPlayers, dt)
 		} else {
-			delete(elementSet, num) // Remove common elements
+			delete(elementSet, dt.ID) // Remove common elements
 		}
 	}
 
-	for num := range elementSet {
-		uncommon = append(uncommon, num)
-	}
-
-	return uncommon
+	return newPlayers
 }

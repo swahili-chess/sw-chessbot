@@ -6,7 +6,7 @@ import (
 	"github.com/ChessSwahili/ChessSWBot/internal/data"
 )
 
-func (sw *SWbot) pollTeam(playersId chan<- []string) {
+func (sw *SWbot) pollTeam(playersId chan<- []data.PlayerMinDt) {
 
 	ticker := time.NewTicker(time.Minute * 5)
 

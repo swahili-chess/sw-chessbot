@@ -2,9 +2,11 @@ package main
 
 import (
 	"time"
+
+	"github.com/ChessSwahili/ChessSWBot/internal/data"
 )
 
-func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []string, listOfPlayerIds *[]string) {
+func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []data.PlayerMinDt, listOfPlayerIds *[]data.PlayerMinDt) {
 
 	ticker := time.NewTicker(time.Second * 6)
 
@@ -19,7 +21,7 @@ func (sw *SWbot) poller(listOfPlayerIdsChan <-chan []string, listOfPlayerIds *[]
 			if len(playerIdsLists) != 0 {
 				*listOfPlayerIds = playerIdsLists
 			}
-			
+
 		default:
 			url := prepareFetchInfoUrl(*listOfPlayerIds)
 			sw.fetchPlayersInfo(url, sw.links)

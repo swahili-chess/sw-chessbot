@@ -11,6 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Player minimum data
+type PlayerMinDt struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
 type TeamPlayer struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
@@ -70,9 +76,9 @@ type TeamPlayer struct {
 	FollowsYou bool `json:"followsYou"`
 }
 
-func FetchTeamPlayers() []string {
+func FetchTeamPlayers() []PlayerMinDt {
 
-	var ids []string
+	var playerMinDt []PlayerMinDt
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -82,7 +88,7 @@ func FetchTeamPlayers() []string {
 	if err != nil {
 		log.Error(err)
 
-		return ids
+		return playerMinDt
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("LICHESS_TOKEN")))
@@ -91,7 +97,7 @@ func FetchTeamPlayers() []string {
 	if err != nil {
 		log.Error(err)
 
-		return ids
+		return playerMinDt
 	}
 
 	defer resp.Body.Close()
@@ -112,10 +118,23 @@ func FetchTeamPlayers() []string {
 			break
 		}
 
-		ids = append(ids, ctp.ID)
+		pd := PlayerMinDt{
+
+			ID:       ctp.ID,
+			Username: ctp.Username,
+		}
+
+		playerMinDt = append(playerMinDt, pd)
 
 	}
-	ids = append(ids, "herald18")
-	return ids
+
+	pd := PlayerMinDt{
+		ID:       "herald18",
+		Username: "herald18",
+	}
+
+	playerMinDt = append(playerMinDt, pd)
+	
+	return playerMinDt
 
 }

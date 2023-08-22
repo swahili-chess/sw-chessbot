@@ -83,7 +83,7 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	listOfPlayerIdsChan := make(chan []string)
+	listOfPlayerIdsChan := make(chan []data.PlayerMinDt)
 
 	updates := bot.GetUpdatesChan(u)
 
