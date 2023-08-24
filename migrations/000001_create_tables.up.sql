@@ -1,3 +1,8 @@
+CREATE TABLE users (
+    id bigint PRIMARY KEY NOT NULL ,
+    isactive bool NOT NULL
+);
+
 CREATE TABLE lichess (
     id SERIAL PRIMARY KEY,
     lichess_id TEXT UNIQUE NOT NULL,
