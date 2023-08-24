@@ -81,13 +81,13 @@ func (u UserModel) GetActiveUsers() ([]UserId, error) {
 
 func (l LichessModel) Insert(player PlayerMinDt) error {
 
-	query := `INSERT INTO lichess(lichess_id, username) VALUES ($1, $2)`
+	query := `INSERT INTO lichess(lichess_id, username, rapid) VALUES ($1, $2, $3)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	defer cancel()
 
-	_, err := l.DB.ExecContext(ctx, query, player.ID, player.Username)
+	_, err := l.DB.ExecContext(ctx, query, player.ID, player.Username, player.Rapid)
 
 	return err
 

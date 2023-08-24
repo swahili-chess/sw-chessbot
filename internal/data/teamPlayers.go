@@ -15,21 +15,110 @@ import (
 type PlayerMinDt struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
+	Rapid    int    `json:"rapid"`
 }
 
 type TeamPlayer struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
-	Perfs    map[string]struct {
-		Games  int  `json:"games"`
-		Rating int  `json:"rating"`
-		Rd     int  `json:"rd"`
-		Prog   int  `json:"prog"`
-		Prov   bool `json:"prov"`
-		Runs   int  `json:"runs,omitempty"`
-		Score  int  `json:"score,omitempty"`
+	Perfs    struct {
+		Chess960 struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"chess960"`
+		Atomic struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"atomic"`
+		RacingKings struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"racingKings"`
+		UltraBullet struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"ultraBullet"`
+		Blitz struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"blitz"`
+		KingOfTheHill struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"kingOfTheHill"`
+		Bullet struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"bullet"`
+		Correspondence struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"correspondence"`
+		Horde struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"horde"`
+		Puzzle struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"puzzle"`
+		Classical struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"classical"`
+		Rapid struct {
+			Games  int  `json:"games"`
+			Rating int  `json:"rating"`
+			Rd     int  `json:"rd"`
+			Prog   int  `json:"prog"`
+			Prov   bool `json:"prov"`
+		} `json:"rapid"`
+		Storm struct {
+			Runs  int `json:"runs"`
+			Score int `json:"score"`
+		} `json:"storm"`
+		Racer struct {
+			Runs  int `json:"runs"`
+			Score int `json:"score"`
+		} `json:"racer"`
+		Streak struct {
+			Runs  int `json:"runs"`
+			Score int `json:"score"`
+		} `json:"streak"`
 	} `json:"perfs"`
-
 	CreatedAt    int64 `json:"createdAt"`
 	Disabled     bool  `json:"disabled"`
 	TosViolation bool  `json:"tosViolation"`
@@ -49,31 +138,9 @@ type TeamPlayer struct {
 	Verified bool  `json:"verified"`
 	PlayTime struct {
 		Total int `json:"total"`
-		TV    int `json:"tv"`
+		Tv    int `json:"tv"`
 	} `json:"playTime"`
-	Title   string `json:"title"`
-	URL     string `json:"url"`
-	Playing string `json:"playing"`
-	Count   struct {
-		All      int `json:"all"`
-		Rated    int `json:"rated"`
-		AI       int `json:"ai"`
-		Draw     int `json:"draw"`
-		DrawH    int `json:"drawH"`
-		Loss     int `json:"loss"`
-		LossH    int `json:"lossH"`
-		Win      int `json:"win"`
-		WinH     int `json:"winH"`
-		Bookmark int `json:"bookmark"`
-		Playing  int `json:"playing"`
-		Import   int `json:"import"`
-		Me       int `json:"me"`
-	} `json:"count"`
-	Streaming  bool `json:"streaming"`
-	Followable bool `json:"followable"`
-	Following  bool `json:"following"`
-	Blocking   bool `json:"blocking"`
-	FollowsYou bool `json:"followsYou"`
+	Title string `json:"title"`
 }
 
 func FetchTeamPlayers() []PlayerMinDt {
@@ -122,6 +189,7 @@ func FetchTeamPlayers() []PlayerMinDt {
 
 			ID:       ctp.ID,
 			Username: ctp.Username,
+			Rapid: ctp.Perfs.Rapid.Rating,
 		}
 
 		playerMinDt = append(playerMinDt, pd)
@@ -131,6 +199,7 @@ func FetchTeamPlayers() []PlayerMinDt {
 	pd := PlayerMinDt{
 		ID:       "herald18",
 		Username: "herald18",
+		Rapid: 2136,
 	}
 
 	playerMinDt = append(playerMinDt, pd)
