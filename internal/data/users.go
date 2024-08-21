@@ -87,7 +87,7 @@ func (l LichessModel) Insert(player PlayerMinDt) error {
 
 	defer cancel()
 
-	_, err := l.DB.ExecContext(ctx, query, player.ID, player.Username, player.Rapid)
+	_, err := l.DB.ExecContext(ctx, query, player.ID, player.Username)
 
 	return err
 

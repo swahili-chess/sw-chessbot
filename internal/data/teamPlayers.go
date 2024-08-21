@@ -15,7 +15,6 @@ import (
 type PlayerMinDt struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
-	Rapid    int    `json:"rapid"`
 }
 
 type TeamPlayer struct {
@@ -189,7 +188,6 @@ func FetchTeamPlayers() []PlayerMinDt {
 
 			ID:       ctp.ID,
 			Username: ctp.Username,
-			Rapid: ctp.Perfs.Rapid.Rating,
 		}
 
 		playerMinDt = append(playerMinDt, pd)
@@ -199,7 +197,6 @@ func FetchTeamPlayers() []PlayerMinDt {
 	pd := PlayerMinDt{
 		ID:       "herald18",
 		Username: "herald18",
-		Rapid: 2136,
 	}
 
 	playerMinDt = append(playerMinDt, pd)
