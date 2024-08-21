@@ -1,18 +1,20 @@
-package main
+package poll
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ChessSwahili/ChessSWBot/internal/data"
-	log "github.com/sirupsen/logrus"
-
+	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
+	withGameIds      = "&withGameIds=true"
+	urlStatus        = "https://lichess.org/api/users/status?ids="
 	base_url         = "https://lichess.org/"
 	minLinkStayInMap = 1 * time.Hour
 	cleanUpTime      = 30 * time.Minute
@@ -30,16 +32,30 @@ type PlayerInfo struct {
 	PlayingId string `json:"playingId"`
 }
 
-// Send the link to the telegram ids
-func (sw *SWbot) sendMsgToTelegramIds(linkId string) {
-	gameLink := base_url + linkId
+func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertLichessDataParams, listOfPlayerIds *[]db.InsertLichessDataParams) {
 
-	ids, _ := sw.models.Users.GetActiveUsers()
+	ticker := time.NewTicker(time.Second * 6)
 
-	for _, id := range ids {
-		msg := tgbotapi.NewMessage(id.Id, gameLink)
+	defer ticker.Stop()
 
-		sw.bot.Send(msg)
+	go sw.cleanUpMap(sw.Links)
+
+	for range ticker.C {
+		select {
+
+		case playerIdsLists := <-listOfPlayerIdsChan:
+			if len(playerIdsLists) != 0 {
+				*listOfPlayerIds = playerIdsLists
+			}
+
+		default:
+			url := prepareFetchInfoUrl(*listOfPlayerIds, urlStatus, withGameIds)
+
+			if url != "" {
+				sw.fetchPlayersInfo(url, sw.Links)
+			}
+		}
+
 	}
 }
 
@@ -54,7 +70,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		log.Error("Error while fetching status")
+		slog.Error("Error while fetching status")
 		return
 	}
 	defer resp.Body.Close()
@@ -62,7 +78,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 	err = json.NewDecoder(resp.Body).Decode(&listOfPlayerInfos)
 
 	if err != nil {
-		log.Error("Error decoding the json body", err)
+		slog.Error("Error decoding the json body", "err", err)
 		return
 	}
 
@@ -80,7 +96,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 				(*links)[playerInfo.PlayingId] = time.Now()
 				sw.mu.Unlock()
 
-				sw.sendMsgToTelegramIds(playerInfo.PlayingId)
+				sw.SendMsgToTelegramIds(playerInfo.PlayingId)
 			}
 
 		}
@@ -89,7 +105,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 }
 
 // Prepare the url to fetch the status of the players
-func prepareFetchInfoUrl(players []data.PlayerMinDt, urlStatus, withGameIds string) string {
+func prepareFetchInfoUrl(players []db.InsertLichessDataParams, urlStatus, withGameIds string) string {
 
 	if len(players) == 0 {
 		return ""
@@ -97,7 +113,7 @@ func prepareFetchInfoUrl(players []data.PlayerMinDt, urlStatus, withGameIds stri
 	playersIds := []string{}
 
 	for _, player := range players {
-		playersIds = append(playersIds, player.ID)
+		playersIds = append(playersIds, player.LichessID)
 	}
 
 	joinedPlayerIds := strings.Join(playersIds, ",")
@@ -132,55 +148,26 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	}
 }
 
-// Send a message to all active users when the bot is down for maintanance
-func (sw *SWbot) sendMaintananceMsg(msg string) {
+func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
+	gameLink := base_url + linkId
 
-	ids, _ := sw.models.Users.GetActiveUsers()
+	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
 
 	for _, id := range ids {
-		msg := tgbotapi.NewMessage(id.Id, msg)
+		msg := tgbotapi.NewMessage(id, gameLink)
 
-		sw.bot.Send(msg)
+		sw.Bot.Send(msg)
 	}
 }
 
-func (sw *SWbot) InsertUsernames(list []data.PlayerMinDt) {
-	// get current usernames in db
-	lichess_ids, err := sw.models.Lichess.GetLichessUsernames()
+// Send a message to all active users when the bot is down for maintanance
+func (sw *SWbot) SendMaintananceMsg(msg string) {
 
-	if err != nil {
-		log.Error("Failed to get usernames in DB")
-		return
+	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
+
+	for _, id := range ids {
+		msg := tgbotapi.NewMessage(id, msg)
+
+		sw.Bot.Send(msg)
 	}
-
-	newPlayers := findNewPlayers(lichess_ids, list)
-
-	for _, player := range newPlayers {
-
-		err := sw.models.Lichess.Insert(player)
-
-		if err != nil {
-			log.Error("Failed to insert user", player)
-		}
-
-	}
-}
-
-func findNewPlayers(lichess_ids []string, players []data.PlayerMinDt) []data.PlayerMinDt {
-	newPlayers := []data.PlayerMinDt{}
-	elementSet := make(map[string]bool)
-
-	for _, lichess_id := range lichess_ids {
-		elementSet[lichess_id] = true
-	}
-
-	for _, dt := range players {
-		if _, found := elementSet[dt.ID]; !found {
-			newPlayers = append(newPlayers, dt)
-		} else {
-			delete(elementSet, dt.ID) // Remove common elements
-		}
-	}
-
-	return newPlayers
 }

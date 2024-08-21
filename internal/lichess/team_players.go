@@ -1,4 +1,4 @@
-package data
+package lichess
 
 import (
 	"encoding/json"
@@ -9,13 +9,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
-
-// Player minimum data
-type PlayerMinDt struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-}
 
 type TeamPlayer struct {
 	ID       string `json:"id"`
@@ -142,9 +137,9 @@ type TeamPlayer struct {
 	Title string `json:"title"`
 }
 
-func FetchTeamPlayers() []PlayerMinDt {
+func FetchTeamPlayers() []db.InsertLichessDataParams {
 
-	var playerMinDt []PlayerMinDt
+	var dt []db.InsertLichessDataParams
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -154,7 +149,7 @@ func FetchTeamPlayers() []PlayerMinDt {
 	if err != nil {
 		log.Error(err)
 
-		return playerMinDt
+		return dt
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("LICHESS_TOKEN")))
@@ -163,7 +158,7 @@ func FetchTeamPlayers() []PlayerMinDt {
 	if err != nil {
 		log.Error(err)
 
-		return playerMinDt
+		return dt
 	}
 
 	defer resp.Body.Close()
@@ -184,23 +179,23 @@ func FetchTeamPlayers() []PlayerMinDt {
 			break
 		}
 
-		pd := PlayerMinDt{
+		pd := db.InsertLichessDataParams{
 
-			ID:       ctp.ID,
-			Username: ctp.Username,
+			LichessID: ctp.ID,
+			Username:  ctp.Username,
 		}
 
-		playerMinDt = append(playerMinDt, pd)
+		dt = append(dt, pd)
 
 	}
 
-	pd := PlayerMinDt{
-		ID:       "herald18",
-		Username: "herald18",
+	pd := db.InsertLichessDataParams{
+		LichessID: "herald18",
+		Username:  "herald18",
 	}
 
-	playerMinDt = append(playerMinDt, pd)
+	dt = append(dt, pd)
 
-	return playerMinDt
+	return dt
 
 }

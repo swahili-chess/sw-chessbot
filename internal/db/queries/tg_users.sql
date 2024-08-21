@@ -1,4 +1,4 @@
--- name: CreateTgBotUsers :exec
+-- name: InsertTgBotUsers :exec
 INSERT INTO tgbot_users (id, isactive) VALUES ($1, $2);
 
 -- name: UpdateTgBotUsers :exec

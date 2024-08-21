@@ -7,14 +7,14 @@ import (
 	"fmt"
 
 	"os"
-	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/ChessSwahili/ChessSWBot/internal/data"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
+	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
+	"github.com/swahili-chess/sw-chessbot/internal/lichess"
+	"github.com/swahili-chess/sw-chessbot/internal/poll"
 )
 
 const startTxt = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`"
@@ -29,19 +29,10 @@ var maintanenanceTxT = "We are having Bot maintenance. Service will resume short
 
 var IsMaintananceCost = false
 
-type SWbot struct {
-	bot    *tgbotapi.BotAPI
-	models data.Models
-	links  *map[string]time.Time
-	mu     sync.RWMutex
-}
-
 func init() {
 
 	log.SetFormatter(&log.JSONFormatter{})
-
 	log.SetOutput(os.Stdout)
-
 	log.SetLevel(log.InfoLevel)
 }
 
@@ -58,15 +49,13 @@ func main() {
 		log.Fatal("Bot token or DSN not provided")
 	}
 
-	db, err := openDB(dsn)
+	con, err := openDB(dsn)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer db.Close()
-
-	models := data.NewModels(db)
+	defer con.Close()
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
@@ -74,21 +63,23 @@ func main() {
 	}
 
 	links := make(map[string]time.Time)
-	swbot := SWbot{
-		bot:    bot,
-		models: models,
-		links:  &links,
+
+	swbot := &poll.SWbot{
+		Bot:   bot,
+		Links: &links,
+		Store: db.NewStore(con),
 	}
 
 	u := tgbotapi.NewUpdate(0)
+
 	u.Timeout = 60
 
-	listOfPlayerIdsChan := make(chan []data.PlayerMinDt)
+	listOfPlayerIdsChan := make(chan []db.InsertLichessDataParams)
 
 	updates := bot.GetUpdatesChan(u)
 
 	//Fetch player ids from the team for the first time
-	listOfPlayerIds := data.FetchTeamPlayers()
+	listOfPlayerIds := lichess.FetchTeamPlayers()
 
 	if len(listOfPlayerIds) == 0 {
 		log.Fatal("No player ids found")
@@ -97,9 +88,9 @@ func main() {
 	swbot.InsertUsernames(listOfPlayerIds)
 
 	// Fetch player  ids after in the team after every 5 minutes
-	go swbot.pollTeam(listOfPlayerIdsChan)
+	go swbot.PollTeam(listOfPlayerIdsChan)
 
-	go swbot.poller(listOfPlayerIdsChan, &listOfPlayerIds)
+	go swbot.Poller(listOfPlayerIdsChan, &listOfPlayerIds)
 
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message updates
@@ -118,17 +109,20 @@ func main() {
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = startTxt
-			botUser := &data.User{
+			botUser := db.InsertTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
-			err := swbot.models.Users.Insert(botUser)
+			err := swbot.Store.InsertTgBotUsers(context.Background(), botUser)
 
 			if err != nil {
 				switch {
-				case err.Error() == `pq: duplicate key value violates unique constraint "users_pkey"`:
-
-					err := swbot.models.Users.Update(botUser)
+				case err.Error() == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
+					args := db.UpdateTgBotUsersParams{
+						ID:       botUser.ID,
+						Isactive: botUser.Isactive,
+					}
+					err := swbot.Store.UpdateTgBotUsers(context.Background(), args)
 					if err != nil {
 						log.Error(err)
 					}
@@ -139,24 +133,24 @@ func main() {
 			}
 
 		case "stop":
-			botUser := &data.User{
+			botUser := db.UpdateTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
-			err := swbot.models.Users.Update(botUser)
+			err := swbot.Store.UpdateTgBotUsers(context.Background(), botUser)
 			if err != nil {
 				log.Error(err)
 			}
 			msg.Text = stopTxt
 		case "subs":
-			res, err := models.Users.GetActiveUsers()
+			res, err := swbot.Store.GetActiveTgBotUsers(context.Background())
 			if err != nil {
 				log.Error(err)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
 		case "ml":
-			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.links))
+			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.Links))
 
 		case "sm":
 			if masterID == update.Message.From.ID {
@@ -180,11 +174,11 @@ func main() {
 		}
 
 		if IsMaintananceCost {
-			swbot.sendMaintananceMsg(maintanenanceTxT)
+			swbot.SendMaintananceMsg(maintanenanceTxT)
 			IsMaintananceCost = false
 
 		} else {
-			if _, err := swbot.bot.Send(msg); err != nil {
+			if _, err := swbot.Bot.Send(msg); err != nil {
 				log.Error(err)
 			}
 		}
@@ -205,8 +199,5 @@ func openDB(dsn string) (*sql.DB, error) {
 
 	db.PingContext(ctx)
 
-	if err != nil {
-		return nil, err
-	}
 	return db, err
 }

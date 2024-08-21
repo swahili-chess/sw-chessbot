@@ -9,10 +9,10 @@ import (
 )
 
 type Querier interface {
-	CreateTgBotUsers(ctx context.Context, arg CreateTgBotUsersParams) error
 	GetActiveTgBotUsers(ctx context.Context) ([]int64, error)
 	GetLichessData(ctx context.Context) ([]string, error)
 	InsertLichessData(ctx context.Context, arg InsertLichessDataParams) error
+	InsertTgBotUsers(ctx context.Context, arg InsertTgBotUsersParams) error
 	UpdateTgBotUsers(ctx context.Context, arg UpdateTgBotUsersParams) error
 }
 

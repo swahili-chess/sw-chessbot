@@ -9,20 +9,6 @@ import (
 	"context"
 )
 
-const createTgBotUsers = `-- name: CreateTgBotUsers :exec
-INSERT INTO tgbot_users (id, isactive) VALUES ($1, $2)
-`
-
-type CreateTgBotUsersParams struct {
-	ID       int64 `json:"id"`
-	Isactive bool  `json:"isactive"`
-}
-
-func (q *Queries) CreateTgBotUsers(ctx context.Context, arg CreateTgBotUsersParams) error {
-	_, err := q.db.ExecContext(ctx, createTgBotUsers, arg.ID, arg.Isactive)
-	return err
-}
-
 const getActiveTgBotUsers = `-- name: GetActiveTgBotUsers :many
 SELECT id from tgbot_users WHERE isactive = true
 `
@@ -48,6 +34,20 @@ func (q *Queries) GetActiveTgBotUsers(ctx context.Context) ([]int64, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const insertTgBotUsers = `-- name: InsertTgBotUsers :exec
+INSERT INTO tgbot_users (id, isactive) VALUES ($1, $2)
+`
+
+type InsertTgBotUsersParams struct {
+	ID       int64 `json:"id"`
+	Isactive bool  `json:"isactive"`
+}
+
+func (q *Queries) InsertTgBotUsers(ctx context.Context, arg InsertTgBotUsersParams) error {
+	_, err := q.db.ExecContext(ctx, insertTgBotUsers, arg.ID, arg.Isactive)
+	return err
 }
 
 const updateTgBotUsers = `-- name: UpdateTgBotUsers :exec
