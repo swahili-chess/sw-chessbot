@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS lichess;
+DROP TABLE IF EXISTS tgbot_users;
