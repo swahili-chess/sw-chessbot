@@ -7,25 +7,25 @@ on:
  
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.20.1
+        go-version: 1.22.4
       
     - name: Test
       run: go test -v ./...
       
     - name: Build
-      run: go build -v -o chessbot-binary ./cmd/bot
+      run: go build -v -o chessbot ./cmd/bot
 
     - uses: actions/upload-artifact@v3
       with:
           name: chessbot-artifact
-          path: ./chessbot-binary
+          path: ./chessbot
 
   deploy:
     runs-on: ubuntu-latest
@@ -42,8 +42,8 @@ jobs:
            username: ${{ secrets.USERNAME }}
            password: ${{ secrets.PASSWORD }}
            port: ${{ secrets.PORT }}
-           source: ./chessbot-binary
-           target: "/home/${{ secrets.USERNAME }}/chessbot"
+           source: ./chessbot
+           target: "/home/${{ secrets.USERNAME }}/chess/chessbot"
 
       - name: Start ChessBot Swahili  service and Reload Nginx
         uses: appleboy/ssh-action@master
@@ -53,8 +53,8 @@ jobs:
            password: ${{ secrets.PASSWORD }}
            port: ${{ secrets.PORT }}
            script: |
-               cd /home/${{ secrets.USERNAME }}/chessbot
-               chmod +x chessbot-binary
+               cd /home/${{ secrets.USERNAME }}/chess/chessbot
+               chmod +x chessbot
                echo ${{ secrets.PASSWORD }} | sudo -S systemctl stop chessbot.service 
                echo ${{ secrets.PASSWORD }} | sudo -S systemctl start chessbot.service 
                echo ${{ secrets.PASSWORD }} | sudo -S systemctl reload nginx
