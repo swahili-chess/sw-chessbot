@@ -74,7 +74,7 @@ func main() {
 
 	u.Timeout = 60
 
-	memberIdsChan := make(chan []db.InsertLichessDataParams)
+	memberIdsChan := make(chan []db.InsertMemberParams)
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -85,7 +85,7 @@ func main() {
 		slog.Error("length of player ids shouldn't be 0")
 	}
 
-	swbot.InsertUsernames(memberIds)
+	swbot.InsertNewMembers(memberIds)
 
 	// Fetch player  ids after in the team after every 5 minutes
 	go swbot.PollTeam(memberIdsChan)

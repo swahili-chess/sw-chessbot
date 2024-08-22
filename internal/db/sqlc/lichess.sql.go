@@ -9,12 +9,12 @@ import (
 	"context"
 )
 
-const getLichessData = `-- name: GetLichessData :many
+const getLichessMembers = `-- name: GetLichessMembers :many
 SELECT lichess_id from lichess
 `
 
-func (q *Queries) GetLichessData(ctx context.Context) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getLichessData)
+func (q *Queries) GetLichessMembers(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getLichessMembers)
 	if err != nil {
 		return nil, err
 	}
@@ -36,16 +36,16 @@ func (q *Queries) GetLichessData(ctx context.Context) ([]string, error) {
 	return items, nil
 }
 
-const insertLichessData = `-- name: InsertLichessData :exec
+const insertMember = `-- name: InsertMember :exec
 INSERT INTO lichess(lichess_id, username) VALUES ($1, $2)
 `
 
-type InsertLichessDataParams struct {
+type InsertMemberParams struct {
 	LichessID string `json:"lichess_id"`
 	Username  string `json:"username"`
 }
 
-func (q *Queries) InsertLichessData(ctx context.Context, arg InsertLichessDataParams) error {
-	_, err := q.db.ExecContext(ctx, insertLichessData, arg.LichessID, arg.Username)
+func (q *Queries) InsertMember(ctx context.Context, arg InsertMemberParams) error {
+	_, err := q.db.ExecContext(ctx, insertMember, arg.LichessID, arg.Username)
 	return err
 }

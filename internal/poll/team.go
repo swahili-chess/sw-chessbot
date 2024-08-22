@@ -18,7 +18,7 @@ type SWbot struct {
 	mu    sync.RWMutex
 }
 
-func (sw *SWbot) PollTeam(playersId chan<- []db.InsertLichessDataParams) {
+func (sw *SWbot) PollTeam(playersId chan<- []db.InsertMemberParams) {
 
 	ticker := time.NewTicker(time.Minute * 5)
 
@@ -30,25 +30,25 @@ func (sw *SWbot) PollTeam(playersId chan<- []db.InsertLichessDataParams) {
 
 		playersId <- lichess.FetchTeamMembers()
 
-		sw.InsertUsernames(usernames)
+		sw.InsertNewMembers(usernames)
 
 	}
 }
 
-func (sw *SWbot) InsertUsernames(list []db.InsertLichessDataParams) {
+func (sw *SWbot) InsertNewMembers(list []db.InsertMemberParams) {
 	// get current usernames in db
-	lichess_ids, err := sw.Store.GetLichessData(context.Background())
+	lichess_ids, err := sw.Store.GetLichessMembers(context.Background())
 
 	if err != nil {
 		slog.Error("Failed to get usernames in DB")
 		return
 	}
 
-	newPlayers := findNewPlayers(lichess_ids, list)
+	newMembers := findNewMembers(lichess_ids, list)
 
-	for _, player := range newPlayers {
+	for _, player := range newMembers {
 
-		err := sw.Store.InsertLichessData(context.Background(), player)
+		err := sw.Store.InsertMember(context.Background(), player)
 
 		if err != nil {
 			slog.Error("Failed to insert user", "player", player)
@@ -57,8 +57,8 @@ func (sw *SWbot) InsertUsernames(list []db.InsertLichessDataParams) {
 	}
 }
 
-func findNewPlayers(lichess_ids []string, players []db.InsertLichessDataParams) []db.InsertLichessDataParams {
-	newPlayers := []db.InsertLichessDataParams{}
+func findNewMembers(lichess_ids []string, players []db.InsertMemberParams) []db.InsertMemberParams {
+	newMembers := []db.InsertMemberParams{}
 	elementSet := make(map[string]bool)
 
 	for _, lichess_id := range lichess_ids {
@@ -67,11 +67,11 @@ func findNewPlayers(lichess_ids []string, players []db.InsertLichessDataParams) 
 
 	for _, dt := range players {
 		if _, found := elementSet[dt.LichessID]; !found {
-			newPlayers = append(newPlayers, dt)
+			newMembers = append(newMembers, dt)
 		} else {
 			delete(elementSet, dt.LichessID) // Remove common elements
 		}
 	}
 
-	return newPlayers
+	return newMembers
 }

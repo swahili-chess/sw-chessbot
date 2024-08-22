@@ -17,9 +17,9 @@ type Member struct {
 	Username string `json:"name"`
 }
 
-func FetchTeamMembers() []db.InsertLichessDataParams {
+func FetchTeamMembers() []db.InsertMemberParams {
 
-	var dt []db.InsertLichessDataParams
+	var dt []db.InsertMemberParams
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -57,14 +57,14 @@ func FetchTeamMembers() []db.InsertLichessDataParams {
 			break
 		}
 
-		dt = append(dt, db.InsertLichessDataParams{
+		dt = append(dt, db.InsertMemberParams{
 			LichessID: member.ID,
 			Username:  member.Username,
 		})
 
 	}
 
-	dt = append(dt, db.InsertLichessDataParams{
+	dt = append(dt, db.InsertMemberParams{
 		LichessID: "herald18",
 		Username:  "herald18",
 	})

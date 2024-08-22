@@ -32,7 +32,7 @@ type Member struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertLichessDataParams, listOfPlayerIds *[]db.InsertLichessDataParams) {
+func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertMemberParams, listOfPlayerIds *[]db.InsertMemberParams) {
 
 	ticker := time.NewTicker(time.Second * 6)
 
@@ -105,7 +105,7 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 }
 
 // Prepare the url to fetch the status of the players
-func prepareFetchInfoUrl(players []db.InsertLichessDataParams, urlStatus, withGameIds string) string {
+func prepareFetchInfoUrl(players []db.InsertMemberParams, urlStatus, withGameIds string) string {
 
 	if len(players) == 0 {
 		return ""
