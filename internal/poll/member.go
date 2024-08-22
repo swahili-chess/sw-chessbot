@@ -21,7 +21,7 @@ const (
 )
 
 // PlayerInfo is the struct that holds the status of the player
-type PlayerInfo struct {
+type Member struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Title     string `json:"title,omitempty"`
@@ -61,7 +61,7 @@ func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertLichessDataParams,
 
 // Fetch the status of the players whether they are playing or not
 func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
-	var listOfPlayerInfos []PlayerInfo
+	var listOfPlayerInfos []Member
 
 	// Create a new client with a timeout
 	var client = &http.Client{
