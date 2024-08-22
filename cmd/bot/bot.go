@@ -21,7 +21,6 @@ const (
 	start_txt       = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`"
 	stop_txt        = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
 	unknown_cmd     = "I don't know that command"
-	master_id       = 731217828
 	maintenance_txt = "We are having Bot maintenance. Service will resume shortly"
 )
 
@@ -52,6 +51,7 @@ func main() {
 	con, err := openDB(dsn)
 	if err != nil {
 		slog.Error("failed connect to db", "err", err)
+		return
 	}
 
 	defer con.Close()
@@ -74,23 +74,21 @@ func main() {
 
 	u.Timeout = 60
 
-	memberIdsChan := make(chan []db.InsertMemberParams)
+	membersIdsChan := make(chan []db.InsertMemberParams)
 
 	updates := bot.GetUpdatesChan(u)
 
-	//Fetch player ids from the team for the first time
+	//Fetch from the team for the first time
 	memberIds := lichess.FetchTeamMembers()
-
 	if len(memberIds) == 0 {
 		slog.Error("length of player ids shouldn't be 0")
 	}
-
 	swbot.InsertNewMembers(memberIds)
 
-	// Fetch player  ids after in the team after every 5 minutes
-	go swbot.PollTeam(memberIdsChan)
 
-	go swbot.Poller(memberIdsChan, &memberIds)
+	go swbot.PollTeam(membersIdsChan)
+
+	go swbot.PollMember(membersIdsChan, &memberIds)
 
 	for update := range updates {
 		if update.Message == nil {
@@ -150,7 +148,7 @@ func main() {
 			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.Links))
 
 		case "sm":
-			if master_id == update.Message.From.ID {
+			if poll.Master_ID == update.Message.From.ID {
 				is_maintenance_txt = true
 			}
 

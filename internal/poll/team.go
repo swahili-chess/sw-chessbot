@@ -18,38 +18,31 @@ type SWbot struct {
 	mu    sync.RWMutex
 }
 
-func (sw *SWbot) PollTeam(playersId chan<- []db.InsertMemberParams) {
+func (sw *SWbot) PollTeam(members chan<- []db.InsertMemberParams) {
 
 	ticker := time.NewTicker(time.Minute * 5)
 
 	defer ticker.Stop()
 
 	for range ticker.C {
-
-		usernames := lichess.FetchTeamMembers()
-
-		playersId <- lichess.FetchTeamMembers()
-
-		sw.InsertNewMembers(usernames)
+		res := lichess.FetchTeamMembers()
+		members <- res
+		sw.InsertNewMembers(res)
 
 	}
 }
 
-func (sw *SWbot) InsertNewMembers(list []db.InsertMemberParams) {
-	// get current usernames in db
-	lichess_ids, err := sw.Store.GetLichessMembers(context.Background())
+func (sw *SWbot) InsertNewMembers(allMembers []db.InsertMemberParams) {
 
+	oldMembers, err := sw.Store.GetLichessMembers(context.Background())
 	if err != nil {
 		slog.Error("Failed to get usernames in DB")
 		return
 	}
 
-	newMembers := findNewMembers(lichess_ids, list)
-
+	newMembers := findNewMembers(oldMembers, allMembers)
 	for _, player := range newMembers {
-
 		err := sw.Store.InsertMember(context.Background(), player)
-
 		if err != nil {
 			slog.Error("Failed to insert user", "player", player)
 		}
@@ -57,19 +50,19 @@ func (sw *SWbot) InsertNewMembers(list []db.InsertMemberParams) {
 	}
 }
 
-func findNewMembers(lichess_ids []string, players []db.InsertMemberParams) []db.InsertMemberParams {
+func findNewMembers(oldMembers []string, allMembers []db.InsertMemberParams) []db.InsertMemberParams {
 	newMembers := []db.InsertMemberParams{}
-	elementSet := make(map[string]bool)
+	oldMembersSet := make(map[string]bool)
 
-	for _, lichess_id := range lichess_ids {
-		elementSet[lichess_id] = true
+	for _, member := range oldMembers {
+		oldMembersSet[member] = true
 	}
 
-	for _, dt := range players {
-		if _, found := elementSet[dt.LichessID]; !found {
-			newMembers = append(newMembers, dt)
+	for _, member := range allMembers {
+		if _, found := oldMembersSet[member.LichessID]; !found {
+			newMembers = append(newMembers, member)
 		} else {
-			delete(elementSet, dt.LichessID) // Remove common elements
+			delete(oldMembersSet, member.LichessID) 
 		}
 	}
 

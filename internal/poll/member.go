@@ -3,13 +3,14 @@ package poll
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
 
 const (
@@ -18,9 +19,10 @@ const (
 	base_url         = "https://lichess.org/"
 	minLinkStayInMap = 1 * time.Hour
 	cleanUpTime      = 30 * time.Minute
+	Master_ID        = 731217828
 )
 
-// PlayerInfo is the struct that holds the status of the player
+
 type Member struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -32,10 +34,9 @@ type Member struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertMemberParams, listOfPlayerIds *[]db.InsertMemberParams) {
+func (sw *SWbot) PollMember(membersIdsChan <-chan []db.InsertMemberParams, membersIds *[]db.InsertMemberParams) {
 
 	ticker := time.NewTicker(time.Second * 6)
-
 	defer ticker.Stop()
 
 	go sw.cleanUpMap(sw.Links)
@@ -43,16 +44,15 @@ func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertMemberParams, list
 	for range ticker.C {
 		select {
 
-		case playerIdsLists := <-listOfPlayerIdsChan:
-			if len(playerIdsLists) != 0 {
-				*listOfPlayerIds = playerIdsLists
+		case memberIdsLists := <-membersIdsChan:
+			if len(memberIdsLists) != 0 {
+				*membersIds = memberIdsLists
 			}
 
 		default:
-			url := prepareFetchInfoUrl(*listOfPlayerIds, urlStatus, withGameIds)
-
+			url := prep_url(*membersIds, urlStatus)
 			if url != "" {
-				sw.fetchPlayersInfo(url, sw.Links)
+				sw.fetchMemberDetails(url, sw.Links)
 			}
 		}
 
@@ -60,43 +60,41 @@ func (sw *SWbot) Poller(listOfPlayerIdsChan <-chan []db.InsertMemberParams, list
 }
 
 // Fetch the status of the players whether they are playing or not
-func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
-	var listOfPlayerInfos []Member
+func (sw *SWbot) fetchMemberDetails(url string, links *map[string]time.Time) {
+	var members []Member
 
-	// Create a new client with a timeout
 	var client = &http.Client{
 		Timeout: time.Second * 10,
 	}
 
 	resp, err := client.Get(url)
 	if err != nil {
-		slog.Error("Error while fetching status")
+		slog.Error("Error while fetching Member status details", "err", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&listOfPlayerInfos)
-
+	err = json.NewDecoder(resp.Body).Decode(&members)
 	if err != nil {
 		slog.Error("Error decoding the json body", "err", err)
 		return
 	}
 
-	for _, playerInfo := range listOfPlayerInfos {
+	for _, member := range members {
 
-		// Sometimes the playingId is empty
-		if len(playerInfo.PlayingId) != 0 {
+		// Sometimes the playingId is empty string
+		if len(member.PlayingId) != 0 {
 
 			sw.mu.RLock()
-			_, idExists := (*links)[playerInfo.PlayingId]
+			_, idExists := (*links)[member.PlayingId]
 			sw.mu.RUnlock()
 
 			if !idExists {
 				sw.mu.Lock()
-				(*links)[playerInfo.PlayingId] = time.Now()
+				(*links)[member.PlayingId] = time.Now()
 				sw.mu.Unlock()
 
-				sw.SendMsgToTelegramIds(playerInfo.PlayingId)
+				sw.SendMsgToTelegramIds(member.PlayingId)
 			}
 
 		}
@@ -104,23 +102,20 @@ func (sw *SWbot) fetchPlayersInfo(url string, links *map[string]time.Time) {
 
 }
 
-// Prepare the url to fetch the status of the players
-func prepareFetchInfoUrl(players []db.InsertMemberParams, urlStatus, withGameIds string) string {
+// Prepare the url to fetch the status of the members
+func prep_url(members []db.InsertMemberParams, urlStatus string) string {
 
-	if len(players) == 0 {
+	if len(members) == 0 {
 		return ""
 	}
-	playersIds := []string{}
-
-	for _, player := range players {
-		playersIds = append(playersIds, player.LichessID)
+	membersIds := []string{}
+	for _, member := range members {
+		membersIds = append(membersIds, member.LichessID)
 	}
-
-	joinedPlayerIds := strings.Join(playersIds, ",")
 
 	var urlBuilder strings.Builder
 	urlBuilder.WriteString(urlStatus)
-	urlBuilder.WriteString(joinedPlayerIds)
+	urlBuilder.WriteString(strings.Join(membersIds, ","))
 	urlBuilder.WriteString(withGameIds)
 
 	return urlBuilder.String()
@@ -136,7 +131,6 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-
 		for lichessId, timeAtStart := range *links {
 			if time.Since(timeAtStart) > minLinkStayInMap {
 				sw.mu.Lock()
@@ -149,25 +143,24 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 }
 
 func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
-	gameLink := base_url + linkId
 
 	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
-
 	for _, id := range ids {
-		msg := tgbotapi.NewMessage(id, gameLink)
+		msg := tgbotapi.NewMessage(id, fmt.Sprintf("%s%s", base_url, linkId))
 
 		sw.Bot.Send(msg)
 	}
 }
 
-// Send a message to all active users when the bot is down for maintanance
+// Send a message to all active users when the bot is going for maintanance
 func (sw *SWbot) SendMaintananceMsg(msg string) {
 
 	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
-
 	for _, id := range ids {
-		msg := tgbotapi.NewMessage(id, msg)
+		if id != Master_ID {
+			msg := tgbotapi.NewMessage(id, msg)
+			sw.Bot.Send(msg)
+		}
 
-		sw.Bot.Send(msg)
 	}
 }
