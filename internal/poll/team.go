@@ -26,9 +26,9 @@ func (sw *SWbot) PollTeam(playersId chan<- []db.InsertLichessDataParams) {
 
 	for range ticker.C {
 
-		usernames := lichess.FetchTeamPlayers()
+		usernames := lichess.FetchTeamMembers()
 
-		playersId <- lichess.FetchTeamPlayers()
+		playersId <- lichess.FetchTeamMembers()
 
 		sw.InsertUsernames(usernames)
 

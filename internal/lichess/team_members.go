@@ -12,12 +12,12 @@ import (
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
 
-type TeamPlayer struct {
+type Member struct {
 	ID       string `json:"id"`
 	Username string `json:"name"`
 }
 
-func FetchTeamPlayers() []db.InsertLichessDataParams {
+func FetchTeamMembers() []db.InsertLichessDataParams {
 
 	var dt []db.InsertLichessDataParams
 	client := &http.Client{
@@ -45,9 +45,9 @@ func FetchTeamPlayers() []db.InsertLichessDataParams {
 
 	for {
 
-		var ctp TeamPlayer
+		var member Member
 
-		err := results.Decode(&ctp)
+		err := results.Decode(&member)
 
 		if err != nil {
 			if err != io.EOF {
@@ -58,8 +58,8 @@ func FetchTeamPlayers() []db.InsertLichessDataParams {
 		}
 
 		dt = append(dt, db.InsertLichessDataParams{
-			LichessID: ctp.ID,
-			Username:  ctp.Username,
+			LichessID: member.ID,
+			Username:  member.Username,
 		})
 
 	}

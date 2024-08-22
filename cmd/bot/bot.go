@@ -17,28 +17,25 @@ import (
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
 )
 
-const startTxt = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`"
-
-const stopTxt = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
-
-const dontTxt = "I don't know that command"
-
-const masterID = 731217828
-
-var maintanenanceTxT = "We are having Bot maintenance. Service will resume shortly"
-
-var IsMaintananceCost = false
+const (
+	start_txt       = "Use this bot to get link of games of Chesswahili team members that are actively playing on Lichess. Type /stop to stop receiving notifications`"
+	stop_txt        = "Sorry to see you leave You wont be receiving notifications. Type /start to receive"
+	unknown_cmd     = "I don't know that command"
+	master_id       = 731217828
+	maintenance_txt = "We are having Bot maintenance. Service will resume shortly"
+)
 
 func init() {
 
 	var programLevel = new(slog.LevelVar)
-
 	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
 }
 
 func main() {
+
+	var is_maintenance_txt = false
 	var dsn string
 	var botToken string
 
@@ -53,7 +50,6 @@ func main() {
 	}
 
 	con, err := openDB(dsn)
-
 	if err != nil {
 		slog.Error("failed connect to db", "err", err)
 	}
@@ -78,41 +74,38 @@ func main() {
 
 	u.Timeout = 60
 
-	listOfPlayerIdsChan := make(chan []db.InsertLichessDataParams)
+	memberIdsChan := make(chan []db.InsertLichessDataParams)
 
 	updates := bot.GetUpdatesChan(u)
 
 	//Fetch player ids from the team for the first time
-	listOfPlayerIds := lichess.FetchTeamPlayers()
+	memberIds := lichess.FetchTeamMembers()
 
-	if len(listOfPlayerIds) == 0 {
+	if len(memberIds) == 0 {
 		slog.Error("length of player ids shouldn't be 0")
 	}
 
-	swbot.InsertUsernames(listOfPlayerIds)
+	swbot.InsertUsernames(memberIds)
 
 	// Fetch player  ids after in the team after every 5 minutes
-	go swbot.PollTeam(listOfPlayerIdsChan)
+	go swbot.PollTeam(memberIdsChan)
 
-	go swbot.Poller(listOfPlayerIdsChan, &listOfPlayerIds)
+	go swbot.Poller(memberIdsChan, &memberIds)
 
 	for update := range updates {
-		if update.Message == nil { // ignore any non-Message updates
+		if update.Message == nil {
 			continue
 		}
 
-		if !update.Message.IsCommand() { // ignore any non-command Messages
+		if !update.Message.IsCommand() {
 			continue
 		}
 
-		// Create a new MessageConfig. We don't have text yet,
-		// so we leave it empty.
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 
-		// Extract the command from the Message
 		switch update.Message.Command() {
 		case "start":
-			msg.Text = startTxt
+			msg.Text = start_txt
 			botUser := db.InsertTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: true,
@@ -145,7 +138,7 @@ func main() {
 			if err != nil {
 				slog.Error("failed to update bot user", "err", err, "args", botUser)
 			}
-			msg.Text = stopTxt
+			msg.Text = stop_txt
 		case "subs":
 			res, err := swbot.Store.GetActiveTgBotUsers(context.Background())
 			if err != nil {
@@ -157,8 +150,8 @@ func main() {
 			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.Links))
 
 		case "sm":
-			if masterID == update.Message.From.ID {
-				IsMaintananceCost = true
+			if master_id == update.Message.From.ID {
+				is_maintenance_txt = true
 			}
 
 		case "help":
@@ -174,12 +167,12 @@ func main() {
 			`
 
 		default:
-			msg.Text = dontTxt
+			msg.Text = unknown_cmd
 		}
 
-		if IsMaintananceCost {
-			swbot.SendMaintananceMsg(maintanenanceTxT)
-			IsMaintananceCost = false
+		if is_maintenance_txt {
+			swbot.SendMaintananceMsg(maintenance_txt)
+			is_maintenance_txt = false
 
 		} else {
 			if _, err := swbot.Bot.Send(msg); err != nil {
@@ -191,17 +184,14 @@ func main() {
 }
 
 func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dsn)
 
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-
 	defer cancel()
 
-	db.PingContext(ctx)
-
-	return db, err
+	return db, db.PingContext(ctx)
 }
