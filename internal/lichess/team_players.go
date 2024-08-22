@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
 
@@ -27,8 +27,7 @@ func FetchTeamPlayers() []db.InsertLichessDataParams {
 	req, err := http.NewRequest("GET", "https://lichess.org/api/team/nyumbani-mates/users", nil)
 
 	if err != nil {
-		log.Error(err)
-
+		slog.Error("failed to create request", "error", err)
 		return dt
 	}
 
@@ -36,8 +35,7 @@ func FetchTeamPlayers() []db.InsertLichessDataParams {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error(err)
-
+		slog.Error("failed to fetch team members", "err", err)
 		return dt
 	}
 
@@ -53,7 +51,7 @@ func FetchTeamPlayers() []db.InsertLichessDataParams {
 
 		if err != nil {
 			if err != io.EOF {
-				log.Error("we got an error while reading")
+				slog.Error("we got an error while reading", "err", err)
 			}
 
 			break

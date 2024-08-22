@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"log/slog"
 
 	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
@@ -31,9 +31,11 @@ var IsMaintananceCost = false
 
 func init() {
 
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+	var programLevel = new(slog.LevelVar)
+
+	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel})
+	slog.SetDefault(slog.New(h))
+
 }
 
 func main() {
@@ -46,20 +48,22 @@ func main() {
 	flag.Parse()
 
 	if botToken == "" || dsn == "" {
-		log.Fatal("Bot token or DSN not provided")
+		slog.Error("Bot token or DSN not provided")
+		return
 	}
 
 	con, err := openDB(dsn)
 
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed connect to db", "err", err)
 	}
 
 	defer con.Close()
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to create bot api instance", "err", err)
+		return
 	}
 
 	links := make(map[string]time.Time)
@@ -82,7 +86,7 @@ func main() {
 	listOfPlayerIds := lichess.FetchTeamPlayers()
 
 	if len(listOfPlayerIds) == 0 {
-		log.Fatal("No player ids found")
+		slog.Error("length of player ids shouldn't be 0")
 	}
 
 	swbot.InsertUsernames(listOfPlayerIds)
@@ -124,11 +128,11 @@ func main() {
 					}
 					err := swbot.Store.UpdateTgBotUsers(context.Background(), args)
 					if err != nil {
-						log.Error(err)
+						slog.Error("failed to update bot user", "err", err, "args", args)
 					}
 
 				default:
-					log.Error(err)
+					slog.Error("failed to insert bot user", "err", err, "args", botUser)
 				}
 			}
 
@@ -139,13 +143,13 @@ func main() {
 			}
 			err := swbot.Store.UpdateTgBotUsers(context.Background(), botUser)
 			if err != nil {
-				log.Error(err)
+				slog.Error("failed to update bot user", "err", err, "args", botUser)
 			}
 			msg.Text = stopTxt
 		case "subs":
 			res, err := swbot.Store.GetActiveTgBotUsers(context.Background())
 			if err != nil {
-				log.Error(err)
+				slog.Error("failed to get bot active members", "err", err)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
@@ -179,7 +183,7 @@ func main() {
 
 		} else {
 			if _, err := swbot.Bot.Send(msg); err != nil {
-				log.Error(err)
+				slog.Error("failed to send msg", "err", err, "msg", msg)
 			}
 		}
 
