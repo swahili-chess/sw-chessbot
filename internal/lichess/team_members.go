@@ -12,6 +12,8 @@ import (
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
 
+const team_members_url = "https://lichess.org/api/team/nyumbani-mates/users"
+
 type Member struct {
 	ID       string `json:"id"`
 	Username string `json:"name"`
@@ -24,7 +26,7 @@ func FetchTeamMembers() []db.InsertMemberParams {
 		Timeout: 10 * time.Second,
 	}
 
-	req, err := http.NewRequest("GET", "https://lichess.org/api/team/nyumbani-mates/users", nil)
+	req, err := http.NewRequest("GET", team_members_url, nil)
 
 	if err != nil {
 		slog.Error("failed to create request", "error", err)
@@ -64,6 +66,7 @@ func FetchTeamMembers() []db.InsertMemberParams {
 
 	}
 
+	// add by force lichess username & Id /;
 	dt = append(dt, db.InsertMemberParams{
 		LichessID: "herald18",
 		Username:  "herald18",
