@@ -22,7 +22,6 @@ const (
 	Master_ID        = 731217828
 )
 
-
 type Member struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
