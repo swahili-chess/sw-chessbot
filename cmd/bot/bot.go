@@ -11,6 +11,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
+	"github.com/swahili-chess/sw-chessbot/config"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
@@ -44,20 +45,18 @@ type InsertTgBotUsersParams struct {
 func main() {
 
 	var is_maintenance_txt = false
-	var API_URL string
-	var botToken string
 
-	flag.StringVar(&API_URL, "db-dsn", os.Getenv("API_URL"), "API URL")
-	flag.StringVar(&botToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
+	flag.StringVar(&config.Cfg.Url, "api-url", os.Getenv("API_URL"), "API URL")
+	flag.StringVar(&config.Cfg.BotToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
 
 	flag.Parse()
 
-	if botToken == "" || API_URL == "" {
-		slog.Error("Bot token or DSN not provided")
+	if config.Cfg.BotToken == "" || config.Cfg.Url == "" {
+		slog.Error("Bot token or API url not provided")
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI(botToken)
+	bot, err := tgbotapi.NewBotAPI(config.Cfg.BotToken)
 	if err != nil {
 		slog.Error("failed to create bot api instance", "err", err)
 		return
@@ -109,7 +108,7 @@ func main() {
 			}
 			var errResponse req.ErrorResponse
 
-			statusCode, err := req.PostOrPutRequest(http.MethodPost, "https://api.swahilichess.com/telegram/bot/users", botUser, &errResponse)
+			statusCode, err := req.PostOrPutRequest(http.MethodPost, fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), botUser, &errResponse)
 			if statusCode == http.StatusInternalServerError {
 				switch {
 				case errResponse.Error == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
@@ -118,7 +117,7 @@ func main() {
 						Isactive: botUser.Isactive,
 					}
 
-					statusCode, err := req.PostOrPutRequest(http.MethodPut, "https://api.swahilichess.com/telegram/bot/users", args, &errResponse)
+					statusCode, err := req.PostOrPutRequest(http.MethodPut,fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), args, &errResponse)
 					if statusCode == http.StatusInternalServerError {
 						slog.Error("failed to update bot user", "error", errResponse.Error)
 					} else if err != nil {
@@ -139,7 +138,7 @@ func main() {
 			}
 			var errResponse req.ErrorResponse
 
-			statusCode, err := req.PostOrPutRequest(http.MethodPut, "https://api.swahilichess.com/telegram/bot/users", botUser, &errResponse)
+			statusCode, err := req.PostOrPutRequest(http.MethodPut, fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), botUser, &errResponse)
 			if statusCode == http.StatusInternalServerError {
 				slog.Error("failed to update bot user", "error", errResponse.Error)
 			} else if err != nil {
@@ -150,7 +149,7 @@ func main() {
 		case "subs":
 			var res []int64
 			var errResponse req.ErrorResponse
-			statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &res, &errResponse)
+			statusCode, err := req.GetRequest(fmt.Sprintf("%s/telegram/bot/users/active", config.Cfg.Url), &res, &errResponse)
 			if statusCode != http.StatusInternalServerError {
 				slog.Error("failed to get telegram bot users", "err", errResponse.Error)
 

@@ -1,12 +1,14 @@
 package poll
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/swahili-chess/sw-chessbot/config"
 	lichess "github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
@@ -36,12 +38,12 @@ func (sw *SWbot) InsertNewMembers(allMembers []lichess.InsertMemberParams) {
 	var oldMembers []string
 	var errResponse req.ErrorResponse
 
-	statusCode, err := req.GetRequest("https://api.swahilichess.com/lichess/members", &oldMembers, &errResponse)
+	statusCode, err := req.GetRequest(fmt.Sprintf("%s/lichess/members", config.Cfg.Url), &oldMembers, &errResponse)
 
 	if statusCode == http.StatusOK && err == nil {
 		newMembers := findNewMembers(oldMembers, allMembers)
 		for _, player := range newMembers {
-			statusCode, err := req.PostOrPutRequest(http.MethodPost, "https://api.swahilichess.com/lichess/members", player, &errResponse)
+			statusCode, err := req.PostOrPutRequest(http.MethodPost,fmt.Sprintf("%s/lichess/members", config.Cfg.Url), player, &errResponse)
 			if statusCode == http.StatusInternalServerError {
 				slog.Error("Failed to insert member", "error", errResponse.Error)
 			} else if err != nil {

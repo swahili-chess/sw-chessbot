@@ -11,6 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
+	"github.com/swahili-chess/sw-chessbot/config"
 )
 
 const (
@@ -146,10 +147,10 @@ func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
 	var ids []int64
 	var errResponse req.ErrorResponse
 
-	statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &ids, &errResponse)
+	statusCode, err := req.GetRequest(fmt.Sprintf("%s/telegram/bot/users/active", config.Cfg.Url), &ids, &errResponse)
 	if statusCode != http.StatusInternalServerError {
 		slog.Error("failed to get telegram bot users", "err", errResponse.Error)
-		
+
 	} else if statusCode != http.StatusOK || err != nil {
 		slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
 	}
@@ -166,7 +167,7 @@ func (sw *SWbot) SendMaintananceMsg(msg string) {
 	var ids []int64
 	var errResponse req.ErrorResponse
 
-	statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &ids, &errResponse)
+	statusCode, err := req.GetRequest(fmt.Sprintf("%s/telegram/bot/users/active", config.Cfg.Url), &ids, &errResponse)
 	if statusCode != http.StatusInternalServerError {
 		slog.Error("failed to get telegram bot users", "err", errResponse.Error)
 
