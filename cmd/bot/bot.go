@@ -1,20 +1,20 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"os"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
-	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
+	"github.com/swahili-chess/sw-chessbot/config"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
+	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
 
 const (
@@ -32,31 +32,31 @@ func init() {
 
 }
 
+type UpdateTgBotUsersParams struct {
+	Isactive bool  `json:"isactive"`
+	ID       int64 `json:"id"`
+}
+
+type InsertTgBotUsersParams struct {
+	ID       int64 `json:"id"`
+	Isactive bool  `json:"isactive"`
+}
+
 func main() {
 
 	var is_maintenance_txt = false
-	var dsn string
-	var botToken string
 
-	flag.StringVar(&dsn, "db-dsn", os.Getenv("DSN_BOT"), "Postgres DSN")
-	flag.StringVar(&botToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
+	flag.StringVar(&config.Cfg.Url, "api-url", os.Getenv("API_URL"), "API URL")
+	flag.StringVar(&config.Cfg.BotToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
 
 	flag.Parse()
 
-	if botToken == "" || dsn == "" {
-		slog.Error("Bot token or DSN not provided")
+	if config.Cfg.BotToken == "" || config.Cfg.Url == "" {
+		slog.Error("Bot token or API url not provided")
 		return
 	}
 
-	con, err := openDB(dsn)
-	if err != nil {
-		slog.Error("failed connect to db", "err", err)
-		return
-	}
-
-	defer con.Close()
-
-	bot, err := tgbotapi.NewBotAPI(botToken)
+	bot, err := tgbotapi.NewBotAPI(config.Cfg.BotToken)
 	if err != nil {
 		slog.Error("failed to create bot api instance", "err", err)
 		return
@@ -67,14 +67,13 @@ func main() {
 	swbot := &poll.SWbot{
 		Bot:   bot,
 		Links: &links,
-		Store: db.NewStore(con),
 	}
 
 	u := tgbotapi.NewUpdate(0)
 
 	u.Timeout = 60
 
-	membersIdsChan := make(chan []db.InsertMemberParams)
+	membersIdsChan := make(chan []lichess.InsertMemberParams)
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -84,7 +83,6 @@ func main() {
 		slog.Error("length of player ids shouldn't be 0")
 	}
 	swbot.InsertNewMembers(memberIds)
-
 
 	go swbot.PollTeam(membersIdsChan)
 
@@ -104,43 +102,59 @@ func main() {
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = start_txt
-			botUser := db.InsertTgBotUsersParams{
+			botUser := InsertTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
-			err := swbot.Store.InsertTgBotUsers(context.Background(), botUser)
+			var errResponse req.ErrorResponse
 
-			if err != nil {
+			statusCode, err := req.PostOrPutRequest(http.MethodPost, fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), botUser, &errResponse)
+			if statusCode == http.StatusInternalServerError {
 				switch {
-				case err.Error() == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
-					args := db.UpdateTgBotUsersParams{
+				case errResponse.Error == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
+					args := UpdateTgBotUsersParams{
 						ID:       botUser.ID,
 						Isactive: botUser.Isactive,
 					}
-					err := swbot.Store.UpdateTgBotUsers(context.Background(), args)
-					if err != nil {
-						slog.Error("failed to update bot user", "err", err, "args", args)
+
+					statusCode, err := req.PostOrPutRequest(http.MethodPut,fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), args, &errResponse)
+					if statusCode == http.StatusInternalServerError {
+						slog.Error("failed to update bot user", "error", errResponse.Error)
+					} else if err != nil {
+						slog.Error("failed to update bot user", "error", err)
 					}
 
 				default:
-					slog.Error("failed to insert bot user", "err", err, "args", botUser)
+					slog.Error("failed to insert bot user", "err", err)
 				}
+			} else if err != nil {
+				slog.Error("failed to insert bot user", "error", err, "statuscode", statusCode)
 			}
 
 		case "stop":
-			botUser := db.UpdateTgBotUsersParams{
+			botUser := UpdateTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
-			err := swbot.Store.UpdateTgBotUsers(context.Background(), botUser)
-			if err != nil {
-				slog.Error("failed to update bot user", "err", err, "args", botUser)
+			var errResponse req.ErrorResponse
+
+			statusCode, err := req.PostOrPutRequest(http.MethodPut, fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), botUser, &errResponse)
+			if statusCode == http.StatusInternalServerError {
+				slog.Error("failed to update bot user", "error", errResponse.Error)
+			} else if err != nil {
+				slog.Error("failed to update bot user", "error", err)
 			}
 			msg.Text = stop_txt
+
 		case "subs":
-			res, err := swbot.Store.GetActiveTgBotUsers(context.Background())
-			if err != nil {
-				slog.Error("failed to get bot active members", "err", err)
+			var res []int64
+			var errResponse req.ErrorResponse
+			statusCode, err := req.GetRequest(fmt.Sprintf("%s/telegram/bot/users/active", config.Cfg.Url), &res, &errResponse)
+			if statusCode != http.StatusInternalServerError {
+				slog.Error("failed to get telegram bot users", "err", errResponse.Error)
+
+			} else if statusCode != http.StatusOK || err != nil {
+				slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
@@ -179,17 +193,4 @@ func main() {
 		}
 
 	}
-}
-
-func openDB(dsn string) (*sql.DB, error) {
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	return db, db.PingContext(ctx)
 }

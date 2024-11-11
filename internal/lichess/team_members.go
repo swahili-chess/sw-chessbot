@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 )
 
 const team_members_url = "https://lichess.org/api/team/nyumbani-mates/users"
@@ -19,9 +17,14 @@ type Member struct {
 	Username string `json:"name"`
 }
 
-func FetchTeamMembers() []db.InsertMemberParams {
+type InsertMemberParams struct {
+	LichessID string `json:"lichess_id"`
+	Username  string `json:"username"`
+}
 
-	var dt []db.InsertMemberParams
+func FetchTeamMembers() []InsertMemberParams {
+
+	var dt []InsertMemberParams
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -59,7 +62,7 @@ func FetchTeamMembers() []db.InsertMemberParams {
 			break
 		}
 
-		dt = append(dt, db.InsertMemberParams{
+		dt = append(dt, InsertMemberParams{
 			LichessID: member.ID,
 			Username:  member.Username,
 		})
@@ -67,7 +70,7 @@ func FetchTeamMembers() []db.InsertMemberParams {
 	}
 
 	// add by force lichess username & Id /;
-	dt = append(dt, db.InsertMemberParams{
+	dt = append(dt, InsertMemberParams{
 		LichessID: "herald18",
 		Username:  "herald18",
 	})
