@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -13,7 +11,6 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
-	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
@@ -34,29 +31,31 @@ func init() {
 
 }
 
+type UpdateTgBotUsersParams struct {
+	Isactive bool  `json:"isactive"`
+	ID       int64 `json:"id"`
+}
+
+type InsertTgBotUsersParams struct {
+	ID       int64 `json:"id"`
+	Isactive bool  `json:"isactive"`
+}
+
 func main() {
 
 	var is_maintenance_txt = false
-	var dsn string
+	var API_URL string
 	var botToken string
 
-	flag.StringVar(&dsn, "db-dsn", os.Getenv("DSN_BOT"), "Postgres DSN")
+	flag.StringVar(&API_URL, "db-dsn", os.Getenv("API_URL"), "API URL")
 	flag.StringVar(&botToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
 
 	flag.Parse()
 
-	if botToken == "" || dsn == "" {
+	if botToken == "" || API_URL == "" {
 		slog.Error("Bot token or DSN not provided")
 		return
 	}
-
-	con, err := openDB(dsn)
-	if err != nil {
-		slog.Error("failed connect to db", "err", err)
-		return
-	}
-
-	defer con.Close()
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
@@ -69,14 +68,13 @@ func main() {
 	swbot := &poll.SWbot{
 		Bot:   bot,
 		Links: &links,
-		Store: db.NewStore(con),
 	}
 
 	u := tgbotapi.NewUpdate(0)
 
 	u.Timeout = 60
 
-	membersIdsChan := make(chan []db.InsertMemberParams)
+	membersIdsChan := make(chan []lichess.InsertMemberParams)
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -86,7 +84,6 @@ func main() {
 		slog.Error("length of player ids shouldn't be 0")
 	}
 	swbot.InsertNewMembers(memberIds)
-
 
 	go swbot.PollTeam(membersIdsChan)
 
@@ -106,7 +103,7 @@ func main() {
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = start_txt
-			botUser := db.InsertTgBotUsersParams{
+			botUser := InsertTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
@@ -116,7 +113,7 @@ func main() {
 			if statusCode == http.StatusInternalServerError {
 				switch {
 				case errResponse.Error == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
-					args := db.UpdateTgBotUsersParams{
+					args := UpdateTgBotUsersParams{
 						ID:       botUser.ID,
 						Isactive: botUser.Isactive,
 					}
@@ -136,7 +133,7 @@ func main() {
 			}
 
 		case "stop":
-			botUser := db.UpdateTgBotUsersParams{
+			botUser := UpdateTgBotUsersParams{
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
@@ -197,17 +194,4 @@ func main() {
 		}
 
 	}
-}
-
-func openDB(dsn string) (*sql.DB, error) {
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	return db, db.PingContext(ctx)
 }

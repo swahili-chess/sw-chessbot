@@ -1,7 +1,6 @@
 package poll
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,7 +9,8 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
+	"github.com/swahili-chess/sw-chessbot/internal/lichess"
+	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
 
 const (
@@ -33,7 +33,7 @@ type Member struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw *SWbot) PollMember(membersIdsChan <-chan []db.InsertMemberParams, membersIds *[]db.InsertMemberParams) {
+func (sw *SWbot) PollMember(membersIdsChan <-chan []lichess.InsertMemberParams, membersIds *[]lichess.InsertMemberParams) {
 
 	ticker := time.NewTicker(time.Second * 6)
 	defer ticker.Stop()
@@ -102,7 +102,7 @@ func (sw *SWbot) fetchMemberDetails(url string, links *map[string]time.Time) {
 }
 
 // Prepare the url to fetch the status of the members
-func prep_url(members []db.InsertMemberParams, urlStatus string) string {
+func prep_url(members []lichess.InsertMemberParams, urlStatus string) string {
 
 	if len(members) == 0 {
 		return ""
@@ -143,7 +143,16 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 
 func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
 
-	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
+	var ids []int64
+	var errResponse req.ErrorResponse
+
+	statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &ids, &errResponse)
+	if statusCode != http.StatusInternalServerError {
+		slog.Error("failed to get telegram bot users", "err", errResponse.Error)
+		
+	} else if statusCode != http.StatusOK || err != nil {
+		slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
+	}
 	for _, id := range ids {
 		msg := tgbotapi.NewMessage(id, fmt.Sprintf("%s%s", base_url, linkId))
 
@@ -154,7 +163,17 @@ func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
 // Send a message to all active users when the bot is going for maintanance
 func (sw *SWbot) SendMaintananceMsg(msg string) {
 
-	ids, _ := sw.Store.GetActiveTgBotUsers(context.Background())
+	var ids []int64
+	var errResponse req.ErrorResponse
+
+	statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &ids, &errResponse)
+	if statusCode != http.StatusInternalServerError {
+		slog.Error("failed to get telegram bot users", "err", errResponse.Error)
+
+	} else if statusCode != http.StatusOK || err != nil {
+		slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
+
+	}
 	for _, id := range ids {
 		if id != Master_ID {
 			msg := tgbotapi.NewMessage(id, msg)
