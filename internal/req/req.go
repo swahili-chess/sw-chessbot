@@ -64,7 +64,7 @@ func PostOrPutRequest(method string, url string, payload interface{}, errorRespo
 
 func GetRequest(url string, response interface{}, errorResponse interface{}) (int, error) {
 
-	if response == nil || url == "" || errorResponse != nil {
+	if response == nil || url == "" || errorResponse == nil {
 		return 0, errors.New("getrequest: response or errorresponse not provided")
 	}
 
