@@ -150,7 +150,7 @@ func main() {
 			var res []int64
 			var errResponse req.ErrorResponse
 			statusCode, err := req.GetRequest(fmt.Sprintf("%s/telegram/bot/users/active", config.Cfg.Url), &res, &errResponse)
-			if statusCode != http.StatusInternalServerError {
+			if statusCode == http.StatusInternalServerError {
 				slog.Error("failed to get telegram bot users", "err", errResponse.Error)
 
 			} else if statusCode != http.StatusOK || err != nil {
