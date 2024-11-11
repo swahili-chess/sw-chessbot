@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"os"
 	"time"
@@ -15,6 +16,7 @@ import (
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/poll"
+	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
 
 const (
@@ -108,23 +110,29 @@ func main() {
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
-			err := swbot.Store.InsertTgBotUsers(context.Background(), botUser)
+			var errResponse req.ErrorResponse
 
-			if err != nil {
+			statusCode, err := req.PostOrPutRequest(http.MethodPost, "https://api.swahilichess.com/telegram/bot/users", botUser, &errResponse)
+			if statusCode == http.StatusInternalServerError {
 				switch {
-				case err.Error() == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
+				case errResponse.Error == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
 					args := db.UpdateTgBotUsersParams{
 						ID:       botUser.ID,
 						Isactive: botUser.Isactive,
 					}
-					err := swbot.Store.UpdateTgBotUsers(context.Background(), args)
-					if err != nil {
-						slog.Error("failed to update bot user", "err", err, "args", args)
+
+					statusCode, err := req.PostOrPutRequest(http.MethodPut, "https://api.swahilichess.com/telegram/bot/users", args, &errResponse)
+					if statusCode == http.StatusInternalServerError {
+						slog.Error("failed to update bot user", "error", errResponse.Error)
+					} else if err != nil {
+						slog.Error("failed to update bot user", "error", err)
 					}
 
 				default:
-					slog.Error("failed to insert bot user", "err", err, "args", botUser)
+					slog.Error("failed to insert bot user", "err", err)
 				}
+			} else if err != nil {
+				slog.Error("failed to insert bot user", "error", err, "statuscode", statusCode)
 			}
 
 		case "stop":
@@ -132,15 +140,25 @@ func main() {
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
-			err := swbot.Store.UpdateTgBotUsers(context.Background(), botUser)
-			if err != nil {
-				slog.Error("failed to update bot user", "err", err, "args", botUser)
+			var errResponse req.ErrorResponse
+
+			statusCode, err := req.PostOrPutRequest(http.MethodPut, "https://api.swahilichess.com/telegram/bot/users", botUser, &errResponse)
+			if statusCode == http.StatusInternalServerError {
+				slog.Error("failed to update bot user", "error", errResponse.Error)
+			} else if err != nil {
+				slog.Error("failed to update bot user", "error", err)
 			}
 			msg.Text = stop_txt
+
 		case "subs":
-			res, err := swbot.Store.GetActiveTgBotUsers(context.Background())
-			if err != nil {
-				slog.Error("failed to get bot active members", "err", err)
+			var res []int64
+			var errResponse req.ErrorResponse
+			statusCode, err := req.GetRequest("https://api.swahilichess.com/telegram/bot/users/active", &res, &errResponse)
+			if statusCode != http.StatusInternalServerError {
+				slog.Error("failed to get telegram bot users", "err", errResponse.Error)
+
+			} else if statusCode != http.StatusOK || err != nil {
+				slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
 			}
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
