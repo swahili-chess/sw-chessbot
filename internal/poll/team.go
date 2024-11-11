@@ -1,14 +1,15 @@
 package poll
 
 import (
-	"context"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	db "github.com/swahili-chess/sw-chessbot/internal/db/sqlc"
 	lichess "github.com/swahili-chess/sw-chessbot/internal/lichess"
+	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
 
 type SWbot struct {
@@ -34,20 +35,28 @@ func (sw *SWbot) PollTeam(members chan<- []db.InsertMemberParams) {
 
 func (sw *SWbot) InsertNewMembers(allMembers []db.InsertMemberParams) {
 
-	oldMembers, err := sw.Store.GetLichessMembers(context.Background())
-	if err != nil {
-		slog.Error("Failed to get usernames in DB")
-		return
-	}
+	var oldMembers []string
+	var errResponse req.ErrorResponse
 
-	newMembers := findNewMembers(oldMembers, allMembers)
-	for _, player := range newMembers {
-		err := sw.Store.InsertMember(context.Background(), player)
-		if err != nil {
-			slog.Error("Failed to insert user", "player", player)
+	statusCode, err := req.GetRequest("https://api.swahilichess.com/lichess/members", &oldMembers, &errResponse)
+
+	if statusCode == http.StatusOK && err == nil {
+		newMembers := findNewMembers(oldMembers, allMembers)
+		for _, player := range newMembers {
+			statusCode, err := req.PostOrPutRequest(http.MethodPost, "https://api.swahilichess.com/lichess/members", player, &errResponse)
+			if statusCode == http.StatusInternalServerError {
+				slog.Error("Failed to insert member", "error", errResponse.Error)
+			} else if err != nil {
+				slog.Error("Failed to insert member", "error", err)
+			}
 		}
+	} else if statusCode == http.StatusInternalServerError {
+		slog.Error("Failed to get members", "error", errResponse.Error)
 
+	} else {
+		slog.Error("Failed to get members", "error", err)
 	}
+
 }
 
 func findNewMembers(oldMembers []string, allMembers []db.InsertMemberParams) []db.InsertMemberParams {
@@ -62,7 +71,7 @@ func findNewMembers(oldMembers []string, allMembers []db.InsertMemberParams) []d
 		if _, found := oldMembersSet[member.LichessID]; !found {
 			newMembers = append(newMembers, member)
 		} else {
-			delete(oldMembersSet, member.LichessID) 
+			delete(oldMembersSet, member.LichessID)
 		}
 	}
 
