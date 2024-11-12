@@ -48,6 +48,8 @@ func main() {
 
 	flag.StringVar(&config.Cfg.Url, "api-url", os.Getenv("API_URL"), "API URL")
 	flag.StringVar(&config.Cfg.BotToken, "bot-token", os.Getenv("TG_BOT_TOKEN"), "Bot Token")
+	flag.StringVar(&config.Cfg.BasicAuth.USERNAME, "basicauth-username", os.Getenv("BASICAUTH_USERNAME"), "basicauth-username")
+	flag.StringVar(&config.Cfg.BasicAuth.PASSWORD, "basicauth-password", os.Getenv("BASICAUTH_PASSWORD"), "basicauth-password")
 
 	flag.Parse()
 

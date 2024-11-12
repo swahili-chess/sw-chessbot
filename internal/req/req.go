@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/swahili-chess/sw-chessbot/config"
 )
 
 type ErrorResponse struct {
@@ -32,6 +34,7 @@ func PostOrPutRequest(method string, url string, payload interface{}, errorRespo
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(config.Cfg.BasicAuth.USERNAME, config.Cfg.BasicAuth.PASSWORD)
 
 	client := http.Client{
 		Timeout: 2 * time.Second,
@@ -73,6 +76,8 @@ func GetRequest(url string, response interface{}, errorResponse interface{}) (in
 	if err != nil {
 		return 0, fmt.Errorf("getrequest: could not create request: %s", err)
 	}
+
+	req.SetBasicAuth(config.Cfg.BasicAuth.USERNAME, config.Cfg.BasicAuth.PASSWORD)
 
 	client := http.Client{
 		Timeout: 2 * time.Second,
