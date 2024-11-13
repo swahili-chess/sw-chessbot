@@ -19,7 +19,9 @@ type SWbot struct {
 	mu    sync.RWMutex
 }
 
-func (sw *SWbot) PollTeam(members chan<- []lichess.InsertMemberParams) {
+// periodically fetches the list of team members and sends the result to a channel for processing.
+// It also calls a function to add new members to the Lichess team member database if they are not already present.
+func (sw *SWbot) PollAndUpdateTeamMembers(members chan<- []lichess.MemberDB) {
 
 	ticker := time.NewTicker(time.Minute * 5)
 
@@ -28,12 +30,14 @@ func (sw *SWbot) PollTeam(members chan<- []lichess.InsertMemberParams) {
 	for range ticker.C {
 		res := lichess.FetchTeamMembers()
 		members <- res
-		sw.InsertNewMembers(res)
+		sw.AddNewLichessTeamMembers(res)
 
 	}
 }
 
-func (sw *SWbot) InsertNewMembers(allMembers []lichess.InsertMemberParams) {
+// retrieves the current list of members, compares it with the provided old list of members,
+// and inserts any new members who are not yet in the database.
+func (sw *SWbot) AddNewLichessTeamMembers(allMembers []lichess.MemberDB) {
 
 	var oldMembers []string
 	var errResponse req.ErrorResponse
@@ -41,9 +45,9 @@ func (sw *SWbot) InsertNewMembers(allMembers []lichess.InsertMemberParams) {
 	statusCode, err := req.GetRequest(fmt.Sprintf("%s/lichess/members", config.Cfg.Url), &oldMembers, &errResponse)
 
 	if statusCode == http.StatusOK && err == nil {
-		newMembers := findNewMembers(oldMembers, allMembers)
+		newMembers := filterNewMembers(oldMembers, allMembers)
 		for _, player := range newMembers {
-			statusCode, err := req.PostOrPutRequest(http.MethodPost,fmt.Sprintf("%s/lichess/members", config.Cfg.Url), player, &errResponse)
+			statusCode, err := req.PostOrPutRequest(http.MethodPost, fmt.Sprintf("%s/lichess/members", config.Cfg.Url), player, &errResponse)
 			if statusCode == http.StatusInternalServerError {
 				slog.Error("Failed to insert member", "error", errResponse.Error)
 			} else if err != nil {
@@ -59,8 +63,9 @@ func (sw *SWbot) InsertNewMembers(allMembers []lichess.InsertMemberParams) {
 
 }
 
-func findNewMembers(oldMembers []string, allMembers []lichess.InsertMemberParams) []lichess.InsertMemberParams {
-	newMembers := []lichess.InsertMemberParams{}
+// compares the list of old member IDs with a list of all new members ids and returns only the new members
+func filterNewMembers(oldMembers []string, allMembers []lichess.MemberDB) []lichess.MemberDB {
+	newMembers := []lichess.MemberDB{}
 	oldMembersSet := make(map[string]bool)
 
 	for _, member := range oldMembers {

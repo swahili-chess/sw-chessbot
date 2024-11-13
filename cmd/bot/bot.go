@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/swahili-chess/sw-chessbot/config"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
-	"github.com/swahili-chess/sw-chessbot/internal/poll"
+	polling "github.com/swahili-chess/sw-chessbot/internal/polling"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
 )
 
@@ -32,12 +32,8 @@ func init() {
 
 }
 
-type UpdateTgBotUsersParams struct {
-	Isactive bool  `json:"isactive"`
-	ID       int64 `json:"id"`
-}
-
-type InsertTgBotUsersParams struct {
+// telegram bot user struct
+type TgBotUser struct {
 	ID       int64 `json:"id"`
 	Isactive bool  `json:"isactive"`
 }
@@ -66,7 +62,7 @@ func main() {
 
 	links := make(map[string]time.Time)
 
-	swbot := &poll.SWbot{
+	swbot := &polling.SWbot{
 		Bot:   bot,
 		Links: &links,
 	}
@@ -75,7 +71,7 @@ func main() {
 
 	u.Timeout = 60
 
-	membersIdsChan := make(chan []lichess.InsertMemberParams)
+	membersIdsChan := make(chan []lichess.MemberDB)
 
 	updates := bot.GetUpdatesChan(u)
 
@@ -84,11 +80,11 @@ func main() {
 	if len(memberIds) == 0 {
 		slog.Error("length of player ids shouldn't be 0")
 	}
-	swbot.InsertNewMembers(memberIds)
+	swbot.AddNewLichessTeamMembers(memberIds)
 
-	go swbot.PollTeam(membersIdsChan)
+	go swbot.PollAndUpdateTeamMembers(membersIdsChan)
 
-	go swbot.PollMember(membersIdsChan, &memberIds)
+	go swbot.PollAndUpdateMemberStatus(membersIdsChan, &memberIds)
 
 	for update := range updates {
 		if update.Message == nil {
@@ -104,7 +100,7 @@ func main() {
 		switch update.Message.Command() {
 		case "start":
 			msg.Text = start_txt
-			botUser := InsertTgBotUsersParams{
+			botUser := TgBotUser{
 				ID:       update.Message.From.ID,
 				Isactive: true,
 			}
@@ -114,12 +110,12 @@ func main() {
 			if statusCode == http.StatusInternalServerError {
 				switch {
 				case errResponse.Error == `pq: duplicate key value violates unique constraint "tgbot_users_pkey"`:
-					args := UpdateTgBotUsersParams{
+					args := TgBotUser{
 						ID:       botUser.ID,
 						Isactive: botUser.Isactive,
 					}
 
-					statusCode, err := req.PostOrPutRequest(http.MethodPut,fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), args, &errResponse)
+					statusCode, err := req.PostOrPutRequest(http.MethodPut, fmt.Sprintf("%s/telegram/bot/users", config.Cfg.Url), args, &errResponse)
 					if statusCode == http.StatusInternalServerError {
 						slog.Error("failed to update bot user", "error", errResponse.Error)
 					} else if err != nil {
@@ -134,7 +130,7 @@ func main() {
 			}
 
 		case "stop":
-			botUser := UpdateTgBotUsersParams{
+			botUser := TgBotUser{
 				ID:       update.Message.From.ID,
 				Isactive: false,
 			}
@@ -146,6 +142,7 @@ func main() {
 			} else if err != nil {
 				slog.Error("failed to update bot user", "error", err)
 			}
+
 			msg.Text = stop_txt
 
 		case "subs":
@@ -158,13 +155,14 @@ func main() {
 			} else if statusCode != http.StatusOK || err != nil {
 				slog.Error("failed to get telegram bot users", "err", err, "statusCode", statusCode)
 			}
+
 			msg.Text = fmt.Sprintf("There are %d subscribers in chesswahiliBot", len(res))
 
 		case "ml":
 			msg.Text = fmt.Sprintf("There are %d in a map so far.", len(*swbot.Links))
 
 		case "sm":
-			if poll.Master_ID == update.Message.From.ID {
+			if polling.Master_ID == update.Message.From.ID {
 				is_maintenance_txt = true
 			}
 
@@ -185,7 +183,7 @@ func main() {
 		}
 
 		if is_maintenance_txt {
-			swbot.SendMaintananceMsg(maintenance_txt)
+			swbot.NotifyUsersOfMaintenance(maintenance_txt)
 			is_maintenance_txt = false
 
 		} else {

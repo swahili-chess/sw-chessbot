@@ -17,14 +17,16 @@ type Member struct {
 	Username string `json:"name"`
 }
 
-type InsertMemberParams struct {
+// struct with  json tags as  db columns
+type MemberDB struct {
 	LichessID string `json:"lichess_id"`
 	Username  string `json:"username"`
 }
 
-func FetchTeamMembers() []InsertMemberParams {
+// fetches all team membere of nyumbani mates
+func FetchTeamMembers() []MemberDB {
 
-	var dt []InsertMemberParams
+	var dt []MemberDB
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -62,15 +64,15 @@ func FetchTeamMembers() []InsertMemberParams {
 			break
 		}
 
-		dt = append(dt, InsertMemberParams{
+		dt = append(dt, MemberDB{
 			LichessID: member.ID,
 			Username:  member.Username,
 		})
 
 	}
 
-	// add by force lichess username & Id /;
-	dt = append(dt, InsertMemberParams{
+	// add by force as team member (refused to join) username & Id /;
+	dt = append(dt, MemberDB{
 		LichessID: "herald18",
 		Username:  "herald18",
 	})

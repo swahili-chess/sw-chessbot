@@ -9,9 +9,9 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/swahili-chess/sw-chessbot/config"
 	"github.com/swahili-chess/sw-chessbot/internal/lichess"
 	"github.com/swahili-chess/sw-chessbot/internal/req"
-	"github.com/swahili-chess/sw-chessbot/config"
 )
 
 const (
@@ -34,12 +34,15 @@ type Member struct {
 	PlayingId string `json:"playingId"`
 }
 
-func (sw *SWbot) PollMember(membersIdsChan <-chan []lichess.InsertMemberParams, membersIds *[]lichess.InsertMemberParams) {
+// pollAndUpdateMemberStatus periodically polls for member data, updates the member list,
+// and fetches member status when available. It also handles removing expired game links in a separate goroutine.
+// It either receives from chan and update team members or ids or it fetch status of current member ids
+func (sw *SWbot) PollAndUpdateMemberStatus(membersIdsChan <-chan []lichess.MemberDB, membersIds *[]lichess.MemberDB) {
 
 	ticker := time.NewTicker(time.Second * 6)
 	defer ticker.Stop()
 
-	go sw.cleanUpMap(sw.Links)
+	go sw.removeExpiredGameLinks(sw.Links)
 
 	for range ticker.C {
 		select {
@@ -50,17 +53,19 @@ func (sw *SWbot) PollMember(membersIdsChan <-chan []lichess.InsertMemberParams, 
 			}
 
 		default:
-			url := prep_url(*membersIds, urlStatus)
+			url := buildMemberStatusesURL(*membersIds, urlStatus)
 			if url != "" {
-				sw.fetchMemberDetails(url, sw.Links)
+				sw.fetchAndUpdateMemberStatuses(url, sw.Links)
 			}
 		}
 
 	}
 }
 
-// Fetch the status of the players whether they are playing or not
-func (sw *SWbot) fetchMemberDetails(url string, links *map[string]time.Time) {
+// fetchAndUpdateMemberStatuses fetches the statuses of team members from the provided URL,
+// checks whether they are currently playing, and updates the `links` map with the playing member IDs.
+// If a new playing member is found, it sends a notification to active Telegram bot users.
+func (sw *SWbot) fetchAndUpdateMemberStatuses(url string, links *map[string]time.Time) {
 	var members []Member
 
 	var client = &http.Client{
@@ -94,7 +99,7 @@ func (sw *SWbot) fetchMemberDetails(url string, links *map[string]time.Time) {
 				(*links)[member.PlayingId] = time.Now()
 				sw.mu.Unlock()
 
-				sw.SendMsgToTelegramIds(member.PlayingId)
+				sw.sendLinkToActiveTelegramIds(member.PlayingId)
 			}
 
 		}
@@ -102,8 +107,8 @@ func (sw *SWbot) fetchMemberDetails(url string, links *map[string]time.Time) {
 
 }
 
-// Prepare the url to fetch the status of the members
-func prep_url(members []lichess.InsertMemberParams, urlStatus string) string {
+// prepare the url to fetch the status of the members
+func buildMemberStatusesURL(members []lichess.MemberDB, urlStatus string) string {
 
 	if len(members) == 0 {
 		return ""
@@ -122,8 +127,8 @@ func prep_url(members []lichess.InsertMemberParams, urlStatus string) string {
 
 }
 
-// Delete links that have stayed in the map for more than 1 hour
-func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
+// delete game links that have stayed in the map for more than 1 hour
+func (sw *SWbot) removeExpiredGameLinks(links *map[string]time.Time) {
 
 	// Run the clean up every 30 minutes
 	ticker := time.NewTicker(cleanUpTime)
@@ -142,7 +147,8 @@ func (sw *SWbot) cleanUpMap(links *map[string]time.Time) {
 	}
 }
 
-func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
+// sends link to telegram Ids (users) that are actively using the bot
+func (sw *SWbot) sendLinkToActiveTelegramIds(linkId string) {
 
 	var ids []int64
 	var errResponse req.ErrorResponse
@@ -161,8 +167,8 @@ func (sw *SWbot) SendMsgToTelegramIds(linkId string) {
 	}
 }
 
-// Send a message to all active users when the bot is going for maintanance
-func (sw *SWbot) SendMaintananceMsg(msg string) {
+// Sends a message to all active users when the bot is going for maintanance (doesn't send to author Hopertz)
+func (sw *SWbot) NotifyUsersOfMaintenance(msg string) {
 
 	var ids []int64
 	var errResponse req.ErrorResponse
