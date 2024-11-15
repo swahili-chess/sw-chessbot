@@ -1,4 +1,4 @@
-module github.com/swahili-chess/sw-chessbot
+module github.com/swahili-chess/notifier-bot
 
 go 1.22.4
 

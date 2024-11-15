@@ -11,10 +11,10 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
-	"github.com/swahili-chess/sw-chessbot/config"
-	"github.com/swahili-chess/sw-chessbot/internal/lichess"
-	polling "github.com/swahili-chess/sw-chessbot/internal/polling"
-	"github.com/swahili-chess/sw-chessbot/internal/req"
+	"github.com/swahili-chess/notifier-bot/config"
+	"github.com/swahili-chess/notifier-bot/internal/lichess"
+	polling "github.com/swahili-chess/notifier-bot/internal/polling"
+	"github.com/swahili-chess/notifier-bot/internal/req"
 )
 
 const (

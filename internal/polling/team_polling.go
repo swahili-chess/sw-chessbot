@@ -8,9 +8,9 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/swahili-chess/sw-chessbot/config"
-	lichess "github.com/swahili-chess/sw-chessbot/internal/lichess"
-	"github.com/swahili-chess/sw-chessbot/internal/req"
+	"github.com/swahili-chess/notifier-bot/config"
+	lichess "github.com/swahili-chess/notifier-bot/internal/lichess"
+	"github.com/swahili-chess/notifier-bot/internal/req"
 )
 
 type SWbot struct {

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/swahili-chess/sw-chessbot/config"
+	"github.com/swahili-chess/notifier-bot/config"
 )
 
 type ErrorResponse struct {
